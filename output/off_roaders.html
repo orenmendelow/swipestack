@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111">
+<title>Off-Roaders</title>
+<link rel="manifest" href='data:application/json,{"name": "Off-Roaders", "short_name": "Off-Roaders", "start_url": ".", "display": "standalone", "background_color": "#111", "theme_color": "#111"}'>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f7f7;--card-bg:#fff;--text:#111;--text-muted:#888;
+  --panel-bg:rgba(255,255,255,0.92);--header-bg:rgba(255,255,255,0.95);
+  --divider:rgba(0,0,0,0.08);--icon-fill:#666;
+  --pass-bg:#e5e5e5;--pass-fg:#555;--like-bg:#333;--like-fg:#fff;
+  --badge-bg:#555;--badge-fg:#fff;
+  --pro:#444;--con:#999;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#111;--card-bg:#1c1c1e;--text:#eee;--text-muted:#777;
+    --panel-bg:rgba(28,28,30,0.92);--header-bg:rgba(17,17,17,0.95);
+    --divider:rgba(255,255,255,0.08);--icon-fill:#999;
+    --pass-bg:#333;--pass-fg:#bbb;--like-bg:#ddd;--like-fg:#111;
+    --badge-bg:#aaa;--badge-fg:#111;
+    --pro:#ccc;--con:#666;
+  }
+}
+html,body{
+  height:100%;width:100%;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+}
+
+.header{position:fixed;top:0;left:0;right:0;z-index:100;padding-top:env(safe-area-inset-top,0px);}
+.header-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  height:48px;padding:0 12px;
+  background:var(--header-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--divider);
+}
+.header-left{display:flex;align-items:center;gap:8px;}
+.menu-btn{display:flex;align-items:center;padding:4px;text-decoration:none;}
+.menu-btn svg{fill:var(--text);}
+.header-title{font-size:17px;font-weight:700;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.counter{font-size:12px;color:var(--text-muted);font-weight:600;font-variant-numeric:tabular-nums;}
+.likes-btn{
+  display:flex;align-items:center;gap:3px;
+  background:none;border:none;color:var(--text);cursor:pointer;
+  font-size:14px;font-weight:600;padding:4px;
+}
+.likes-btn svg{width:18px;height:18px;fill:var(--text);}
+.region-toggle{
+  display:flex;border-radius:12px;overflow:hidden;
+  border:1px solid var(--divider);
+}
+.region-toggle button{
+  padding:3px 10px;font-size:11px;font-weight:600;
+  border:none;cursor:pointer;background:transparent;color:var(--text-muted);
+}
+.region-toggle button.active{background:var(--text);color:var(--bg);border-radius:11px;}
+
+.budget-bar{
+  position:fixed;top:calc(48px + env(safe-area-inset-top,0px));left:0;right:0;z-index:99;
+  padding:6px 12px;display:flex;align-items:center;gap:8px;
+  background:var(--header-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--divider);
+  font-size:12px;color:var(--text-muted);
+}
+.budget-bar label{font-weight:600;white-space:nowrap;}
+.budget-bar input[type=range]{flex:1;accent-color:var(--text);height:20px;}
+.budget-val{font-weight:700;color:var(--text);min-width:40px;text-align:right;font-variant-numeric:tabular-nums;}
+
+.main{
+  position:fixed;
+  top:calc(48px + 34px + env(safe-area-inset-top,0px));
+  bottom:calc(56px + env(safe-area-inset-bottom,0px));
+  left:0;right:0;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+
+.card-container{position:relative;width:100%;height:100%;max-width:420px;}
+.card{
+  position:absolute;top:4px;left:6px;right:6px;bottom:4px;
+  border-radius:14px;overflow:hidden;
+  background:var(--card-bg);
+  box-shadow:0 2px 16px rgba(0,0,0,0.1);
+  display:flex;flex-direction:column;
+  transform-origin:center center;
+  will-change:transform;
+  touch-action:none;
+}
+.card.active{z-index:3;}
+.card.next{z-index:2;transform:scale(0.97) translateY(6px);pointer-events:none;}
+.card.third{z-index:1;transform:scale(0.94) translateY(12px);pointer-events:none;}
+.card.entering{animation:cardEnter .2s ease-out;}
+@keyframes cardEnter{from{transform:scale(0.95);opacity:0.7}to{transform:scale(1);opacity:1}}
+.card.swiping-right .stamp-like,.card.swiping-left .stamp-nope{opacity:1;}
+
+.stamp{
+  position:absolute;top:20%;left:50%;transform:translate(-50%,-50%);
+  z-index:20;font-size:40px;font-weight:900;letter-spacing:2px;
+  padding:6px 20px;border-radius:10px;
+  border:3px solid;opacity:0;pointer-events:none;
+}
+.stamp-like{color:#333;border-color:#333;transform:translate(-50%,-50%) rotate(-15deg);}
+.stamp-nope{color:#999;border-color:#999;transform:translate(-50%,-50%) rotate(15deg);}
+@media(prefers-color-scheme:dark){
+  .stamp-like{color:#ddd;border-color:#ddd;}
+  .stamp-nope{color:#666;border-color:#666;}
+}
+
+.card-images{position:relative;flex:0 0 52%;overflow:hidden;background:#222;}
+.card-images img{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  object-fit:cover;display:none;
+}
+.card-images img.visible{display:block;}
+.img-placeholder{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;
+}
+.img-placeholder svg{width:48px;height:48px;fill:var(--text-muted);opacity:.2;}
+.img-dots{
+  position:absolute;bottom:6px;left:50%;transform:translateX(-50%);
+  display:flex;gap:4px;z-index:10;
+}
+.img-dots span{
+  width:6px;height:6px;border-radius:50%;
+  background:rgba(255,255,255,0.35);
+}
+.img-dots span.active{background:#fff;transform:scale(1.2);}
+.img-tap-zone{position:absolute;top:0;bottom:0;z-index:5;}
+.img-tap-zone.left{left:0;width:30%;}
+.img-tap-zone.right{right:0;width:30%;}
+
+.card-profile{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding:12px 14px 16px;
+  background:var(--panel-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-radius:14px 14px 0 0;
+  margin-top:-14px;position:relative;z-index:5;
+}
+.card-badge{
+  position:absolute;top:10px;right:14px;
+  display:inline-flex;align-items:center;gap:3px;
+  background:var(--badge-bg);color:var(--badge-fg);
+  font-size:10px;font-weight:700;letter-spacing:.5px;
+  padding:2px 8px;border-radius:10px;
+}
+.card-badge svg{width:12px;height:12px;fill:var(--badge-fg);}
+.card-name{font-size:20px;font-weight:800;margin-bottom:1px;padding-right:70px;line-height:1.2;}
+.card-subtitle{font-size:13px;color:var(--text-muted);margin-bottom:10px;}
+
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;}
+.stat{
+  display:flex;align-items:flex-start;gap:6px;
+  padding:5px 7px;border-radius:7px;background:var(--divider);
+}
+.stat svg{width:15px;height:15px;flex-shrink:0;margin-top:1px;fill:var(--icon-fill);}
+.stat-text{display:flex;flex-direction:column;}
+.stat-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;}
+.stat-value{font-size:13px;font-weight:700;line-height:1.2;}
+.stat-note{font-size:9px;color:var(--text-muted);}
+
+.pros-cons{margin-bottom:8px;}
+.pros-cons ul{list-style:none;padding:0;}
+.pros-cons li{display:flex;align-items:flex-start;gap:5px;font-size:12px;line-height:1.3;margin-bottom:3px;}
+.pros-cons li svg{width:14px;height:14px;flex-shrink:0;margin-top:1px;}
+.pros-cons .pro svg{fill:var(--pro);}
+.pros-cons .con svg{fill:var(--con);}
+.card-vibe{font-size:12px;font-style:italic;color:var(--text-muted);margin-bottom:4px;}
+.card-footnote{
+  font-size:11px;color:var(--text-muted);
+  border-top:1px solid var(--divider);
+  padding-top:6px;margin-top:6px;
+}
+
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:var(--header-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--divider);
+}
+.bottom-bar-inner{
+  display:flex;align-items:center;justify-content:center;gap:28px;
+  height:52px;max-width:420px;margin:0 auto;
+}
+.action-btn{
+  display:flex;align-items:center;justify-content:center;
+  border:none;border-radius:50%;cursor:pointer;
+  transition:transform .1s;
+}
+.action-btn:active{transform:scale(0.9);}
+.btn-pass{
+  width:44px;height:44px;
+  background:var(--pass-bg);color:var(--pass-fg);
+  border:1.5px solid var(--divider);
+}
+.btn-pass svg{width:20px;height:20px;fill:var(--pass-fg);}
+.btn-undo{width:36px;height:36px;background:transparent;border:1.5px solid var(--divider);}
+.btn-undo svg{width:16px;height:16px;fill:var(--text-muted);}
+.btn-like{
+  width:44px;height:44px;
+  background:var(--like-bg);color:var(--like-fg);
+}
+.btn-like svg{width:20px;height:20px;fill:var(--like-fg);}
+
+.likes-screen{
+  position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:none;flex-direction:column;
+}
+.likes-screen.visible{display:flex;}
+.likes-header{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px));
+  border-bottom:1px solid var(--divider);
+  background:var(--header-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+}
+.likes-back{
+  background:none;border:none;color:var(--text);
+  font-size:14px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:3px;
+}
+.likes-back svg{width:18px;height:18px;fill:var(--text);}
+.likes-header-title{font-size:17px;font-weight:700;flex:1;}
+.likes-actions{display:flex;gap:6px;}
+.likes-actions button{
+  padding:5px 12px;border-radius:16px;border:1px solid var(--divider);
+  font-size:12px;font-weight:600;cursor:pointer;
+  background:var(--bg);color:var(--text);
+}
+.btn-copy{background:var(--text)!important;color:var(--bg)!important;border-color:var(--text)!important;}
+.likes-grid{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:10px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;
+}
+.likes-grid-item{
+  border-radius:10px;overflow:hidden;cursor:pointer;
+  aspect-ratio:3/4;position:relative;background:var(--card-bg);
+  box-shadow:0 1px 6px rgba(0,0,0,0.06);
+}
+.likes-grid-item img{width:100%;height:100%;object-fit:cover;}
+.likes-grid-item .likes-item-name{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:20px 6px 6px;
+  background:linear-gradient(transparent,rgba(0,0,0,0.65));
+  color:#fff;font-size:12px;font-weight:600;
+}
+.likes-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;color:var(--text-muted);gap:6px;font-size:14px;
+}
+.likes-empty svg{width:40px;height:40px;fill:var(--text-muted);opacity:.2;}
+
+.modal-overlay{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,0.5);
+  display:none;align-items:flex-end;justify-content:center;
+}
+.modal-overlay.visible{display:flex;}
+.modal{
+  width:100%;max-width:420px;max-height:85vh;
+  background:var(--card-bg);border-radius:16px 16px 0 0;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:16px 14px calc(16px + env(safe-area-inset-bottom,0px));
+}
+.modal-close{
+  display:flex;align-items:center;gap:3px;
+  background:none;border:none;color:var(--text);
+  font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;
+}
+.modal-close svg{width:16px;height:16px;fill:var(--text);}
+.modal .card-images{position:relative;height:220px;border-radius:10px;overflow:hidden;margin-bottom:14px;flex:none;}
+
+.end-screen{
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:14px;padding:28px;
+  position:absolute;inset:0;
+}
+.end-screen.visible{display:flex;}
+.end-screen h2{font-size:20px;font-weight:700;}
+.end-screen p{color:var(--text-muted);font-size:14px;}
+.end-screen button{
+  padding:10px 24px;border-radius:50px;border:none;
+  font-size:14px;font-weight:700;cursor:pointer;
+}
+.end-btn-likes{background:var(--text);color:var(--bg);}
+.end-btn-reset{background:var(--divider);color:var(--text);}
+</style>
+</head>
+<body>
+
+<div class="header">
+<div class="header-inner">
+  <div class="header-left">
+    <a href="index.html" class="menu-btn"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></a>
+    <div class="header-title">Off-Roaders</div>
+  </div>
+  <div class="header-right">
+    <span class="counter" id="counter"></span>
+    <div class="region-toggle">
+      <button id="regionUs" class="active" onclick="setRegion('us')">US</button>
+      <button id="regionAll" onclick="setRegion('all')">All</button>
+    </div>
+    <button class="likes-btn" id="likesBtn" onclick="showLikes()">
+      <span class="likes-count" id="likesCount">0</span>
+      <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    </button>
+  </div>
+</div>
+</div>
+
+<div class="budget-bar">
+  <label>Budget</label>
+  <input type="range" id="budgetSlider" min="0" max="100" value="100" oninput="onBudget(this.value)">
+  <span class="budget-val" id="budgetVal">Any</span>
+</div>
+
+<div class="main">
+  <div class="card-container" id="cardContainer"></div>
+  <div class="end-screen" id="endScreen">
+    <h2 id="endTitle">Done!</h2>
+    <p id="endSub"></p>
+    <button class="end-btn-likes" onclick="showLikes()">Review Likes</button>
+    <button class="end-btn-reset" onclick="startOver()">Start Over</button>
+  </div>
+</div>
+
+<div class="bottom-bar">
+<div class="bottom-bar-inner">
+  <button class="action-btn btn-pass" onclick="doPass()">
+    <svg viewBox="0 0 24 24"><path d="M18.3 5.71a1 1 0 00-1.41 0L12 10.59 7.11 5.7A1 1 0 105.7 7.11L10.59 12 5.7 16.89a1 1 0 101.41 1.41L12 13.41l4.89 4.89a1 1 0 001.41-1.41L13.41 12l4.89-4.89a1 1 0 000-1.4z"/></svg>
+  </button>
+  <button class="action-btn btn-undo" onclick="doUndo()">
+    <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05 1.04-6.83 2.73L2.5 7.5v9h9l-3.19-3.19C9.76 12.07 11.07 11.5 12.5 11.5c3.03 0 5.55 2.12 6.2 4.97l2.93-.82C20.6 11.37 16.9 8 12.5 8z"/></svg>
+  </button>
+  <button class="action-btn btn-like" onclick="doLike()">
+    <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+  </button>
+</div>
+</div>
+
+<div class="likes-screen" id="likesScreen">
+<div class="likes-header">
+  <button class="likes-back" onclick="hideLikes()">
+    <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    Back
+  </button>
+  <div class="likes-header-title">Liked</div>
+  <div class="likes-actions">
+    <button class="btn-copy" onclick="copyLikes()">Copy List</button>
+    <button onclick="startOver()">Start Over</button>
+  </div>
+</div>
+<div class="likes-grid" id="likesGrid"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+<div class="modal" id="modal" onclick="event.stopPropagation()"></div>
+</div>
+
+<script>
+const ITEMS = [{"id": "chevrolet-silverado-1500", "name": "Chevrolet Silverado 1500", "subtitle": "2020-2021", "images": ["images/chevrolet-silverado-1500/front.jpg", "images/chevrolet-silverado-1500/rear.jpg", "images/chevrolet-silverado-1500/interior.jpg", "images/chevrolet-silverado-1500/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "6.1s", "note": null}, {"icon": "engine", "label": "Engine", "value": "5.3L V8", "note": null}, {"icon": "drive", "label": "Drive", "value": "4WD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "11,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Part-Time 4WD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$28k-$36k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Huge towing and payload capacity", "Proven V8 reliability", "Wide range of trims for every budget"], "cons": ["Interior quality lags Ram and Ford", "Thirsty V8 fuel economy", "Enormous footprint for urban driving"], "vibe": "Full-size workhorse with V8 grunt and massive towing muscle.", "footnote": "Requires: 2LT Trim with Adaptive Cruise Control Package", "region": "us", "min_price": 28000}, {"id": "dodge-durango", "name": "Dodge Durango", "subtitle": "2020-2021", "images": ["images/dodge-durango/rear.jpg", "images/dodge-durango/interior.jpg", "images/dodge-durango/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "18/25", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "6.2s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.6L V6", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.1 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "8,700 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$26k-$34k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "4/5", "note": null}], "pros": ["Best-in-class towing for a three-row SUV", "SRT and Hellcat trims are absurd fun", "Aggressive styling stands out"], "cons": ["Aging platform and interior design", "Fuel economy is poor across the range", "Third row is tight for adults"], "vibe": "Muscle-car-meets-SUV with available Hellcat power and three rows.", "footnote": "Requires: Adaptive Cruise Control (ACC)", "region": "us", "min_price": 26000}, {"id": "ford-bronco-sport", "name": "Ford Bronco Sport", "subtitle": "2021-2024", "images": ["images/ford-bronco-sport/front.jpg", "images/ford-bronco-sport/rear.jpg", "images/ford-bronco-sport/interior.jpg", "images/ford-bronco-sport/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "21/26", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "6.5s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.0L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "4WD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.8 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,200 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time 4WD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$22k-$28k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "4/5", "note": null}], "pros": ["Surprisingly capable off-road for its size", "Rugged retro styling", "Badlands trim has a twin-clutch rear diff"], "cons": ["Not as spacious as the full Bronco", "Base engine is underpowered", "Towing capacity is limited"], "vibe": "Trail-ready compact SUV with serious off-road chops in a small package.", "footnote": null, "region": "us", "min_price": 22000}, {"id": "ford-expedition", "name": "Ford Expedition", "subtitle": "2022-2024", "images": ["images/ford-expedition/front.jpg", "images/ford-expedition/rear.jpg", "images/ford-expedition/interior.jpg", "images/ford-expedition/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "16/22", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "5.9s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.5L Twin-Turbo V6", "note": null}, {"icon": "drive", "label": "Drive", "value": "4WD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "9.8 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "9,300 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Part-Time 4WD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$42k-$52k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Massive interior space for passengers and cargo", "Strong twin-turbo V6 towing power", "Independent rear suspension for smooth ride"], "cons": ["Fuel economy is dismal", "Expensive when optioned up", "Too large for tight parking situations"], "vibe": "Full-size family hauler with three rows and serious towing ability.", "footnote": null, "region": "us", "min_price": 42000}, {"id": "ford-explorer", "name": "Ford Explorer", "subtitle": "2020-2024", "images": ["images/ford-explorer/front.jpg", "images/ford-explorer/rear.jpg", "images/ford-explorer/interior.jpg", "images/ford-explorer/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "18/24", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "5.6s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.3L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,600 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$22k-$30k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Spacious three-row seating", "Available twin-turbo V6 for ST trim", "Decent towing for a midsize SUV"], "cons": ["Infotainment can be glitchy", "Early model year reliability issues", "Third row is cramped"], "vibe": "America's best-selling three-row SUV with a turbo four or twin-turbo V6.", "footnote": null, "region": "us", "min_price": 22000}, {"id": "ford-explorer-hybrid", "name": "Ford Explorer Hybrid", "subtitle": "2020-2024", "images": ["images/ford-explorer-hybrid/front.jpg", "images/ford-explorer-hybrid/rear.jpg", "images/ford-explorer-hybrid/interior.jpg", "images/ford-explorer-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "6.9s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.3L V6 Hybrid", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$26k-$34k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Significantly better fuel economy than gas Explorer", "Same interior space as standard model", "Smooth hybrid powertrain"], "cons": ["Less towing capacity than gas V6", "Hybrid premium adds to base price", "Battery takes some cargo floor space"], "vibe": "Three-row hybrid that cuts fuel costs without sacrificing space.", "footnote": null, "region": "us", "min_price": 26000}, {"id": "ford-f-150", "name": "Ford F-150", "subtitle": "2021-2023", "images": ["images/ford-f-150/front.jpg", "images/ford-f-150/rear.jpg", "images/ford-f-150/interior.jpg", "images/ford-f-150/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "17/23", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "5.3s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.5L Twin-Turbo V6", "note": null}, {"icon": "drive", "label": "Drive", "value": "4WD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "9.4 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "13,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Part-Time 4WD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$28k-$38k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "4/5", "note": null}], "pros": ["Massive towing and payload capacity", "Aluminum body saves weight", "Enormous range of trims and configurations"], "cons": ["Fuel economy suffers with the V6 turbo", "High-trim prices rival luxury trucks", "Ride quality is truck-firm on rough roads"], "vibe": "America's best-selling vehicle for decades, and for good reason.", "footnote": null, "region": "us", "min_price": 28000}, {"id": "ford-f-150-hybrid", "name": "Ford F-150 Hybrid", "subtitle": "2021-2023", "images": ["images/ford-f-150-hybrid/front.jpg", "images/ford-f-150-hybrid/rear.jpg", "images/ford-f-150-hybrid/interior.jpg", "images/ford-f-150-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "17/23", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "5.7s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.5L Twin-Turbo V6 Hybrid (PowerBoost)", "note": null}, {"icon": "drive", "label": "Drive", "value": "4WD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "9.4 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "12,700 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Part-Time 4WD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$32k-$42k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Pro Power Onboard is a rolling generator", "Best-in-class hybrid truck fuel economy", "Still tows over 12,000 lbs"], "cons": ["Hybrid premium is substantial", "Complex powertrain may cost more to repair", "Only available on higher trims"], "vibe": "PowerBoost hybrid adds a mobile generator and better mpg to the F-150.", "footnote": null, "region": "us", "min_price": 32000}, {"id": "ford-maverick", "name": "Ford Maverick", "subtitle": "2022-2024", "images": ["images/ford-maverick/front.jpg", "images/ford-maverick/rear.jpg", "images/ford-maverick/interior.jpg", "images/ford-maverick/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "22/29", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "6.4s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.0L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.6 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "4,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$22k-$28k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Unibody construction rides like a car", "Incredible value for a new truck", "Versatile bed with DIY-friendly slots"], "cons": ["Bed is small for serious hauling", "Rear seat is tight for tall passengers", "High demand leads to markups"], "vibe": "Compact truck that parks like a car but hauls like it means it.", "footnote": null, "region": "us", "min_price": 22000}, {"id": "ford-maverick-hybrid", "name": "Ford Maverick Hybrid", "subtitle": "2022-2024", "images": ["images/ford-maverick-hybrid/front.jpg", "images/ford-maverick-hybrid/rear.jpg", "images/ford-maverick-hybrid/interior.jpg", "images/ford-maverick-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "23/30", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.6s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L I4 Hybrid", "note": null}, {"icon": "drive", "label": "Drive", "value": "FWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.6 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,000 lbs", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$20k-$26k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Best fuel economy of any pickup, period", "Lowest starting price in the truck segment", "Practical for urban truck needs"], "cons": ["FWD only, no AWD option for hybrid", "Towing limited to 2,000 lbs", "CVT can drone under heavy acceleration"], "vibe": "42 mpg city in a pickup truck. Not a typo.", "footnote": null, "region": "us", "min_price": 20000}, {"id": "ford-ranger", "name": "Ford Ranger", "subtitle": "2024", "images": ["images/ford-ranger/front.jpg", "images/ford-ranger/rear.jpg", "images/ford-ranger/interior.jpg", "images/ford-ranger/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "20/24", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "6.8s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.3L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "4WD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "7,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Part-Time 4WD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$30k-$36k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "4/5", "note": null}], "pros": ["More maneuverable than full-size trucks", "Strong towing for a midsize", "Available Tremor off-road package"], "cons": ["Interior is dated compared to rivals", "Ride quality is stiff unladen", "Rear seat space is limited in SuperCab"], "vibe": "Midsize truck with genuine off-road capability and manageable size.", "footnote": null, "region": "us", "min_price": 30000}, {"id": "gmc-sierra-1500", "name": "GMC Sierra 1500", "subtitle": "2020-2021", "images": ["images/gmc-sierra-1500/front.jpg", "images/gmc-sierra-1500/rear.jpg", "images/gmc-sierra-1500/interior.jpg", "images/gmc-sierra-1500/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "6.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "5.3L V8", "note": null}, {"icon": "drive", "label": "Drive", "value": "4WD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "11,800 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Part-Time 4WD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$28k-$38k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["MultiPro tailgate is genuinely useful", "Denali and AT4 trims are luxurious", "Strong V8 towing performance"], "cons": ["Expensive when loaded with options", "CarbonPro bed is pricey", "Poor fuel economy with the V8"], "vibe": "Premium-trimmed Silverado sibling with the MultiPro tailgate.", "footnote": "Requires: 2LT Trim with Adaptive Cruise Control Package", "region": "us", "min_price": 28000}, {"id": "genesis-gv70", "name": "Genesis GV70", "subtitle": "2022-2024", "images": ["images/genesis-gv70/front.jpg", "images/genesis-gv70/rear.jpg", "images/genesis-gv70/interior.jpg", "images/genesis-gv70/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "19/26", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "5.1s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "3,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$30k-$38k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "4/5", "note": null}], "pros": ["Stunning exterior and interior design", "Powerful turbo engine with sport tuning", "5-year bumper-to-bumper warranty"], "cons": ["Cargo space is smaller than rivals", "Infotainment takes time to learn", "Brand awareness is still growing"], "vibe": "Luxury sport SUV that embarrasses German rivals at a lower price.", "footnote": null, "region": "us", "min_price": 30000}, {"id": "genesis-gv70-electrified", "name": "Genesis GV70 Electrified", "subtitle": "2022-2024", "images": ["images/genesis-gv70-electrified/front.jpg", "images/genesis-gv70-electrified/rear.jpg", "images/genesis-gv70-electrified/interior.jpg", "images/genesis-gv70-electrified/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "4.2s", "note": null}, {"icon": "engine", "label": "Engine", "value": "Dual Electric Motors", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "3,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$32k-$40k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "4/5", "note": null}], "pros": ["800V architecture for ultra-fast charging", "429 hp dual-motor AWD is quick", "Luxurious interior with no gas costs"], "cons": ["236-mile range is modest for an EV", "Heavy battery adds weight", "Charging network not as robust as Tesla"], "vibe": "Electric luxury SUV with 429 hp and rapid 800V charging.", "footnote": null, "region": "us", "min_price": 32000}, {"id": "genesis-gv80", "name": "Genesis GV80", "subtitle": "2023", "images": ["images/genesis-gv80/front.jpg", "images/genesis-gv80/rear.jpg", "images/genesis-gv80/interior.jpg", "images/genesis-gv80/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "20/24", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "5.5s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.7 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "6,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$42k-$50k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Opulent interior with quilted leather", "Available 3.5L twin-turbo V6", "Strong value vs. German luxury SUVs"], "cons": ["Third row is very tight", "Fuel economy is mediocre", "Resale value still unproven"], "vibe": "Full-size luxury SUV that undercuts BMW X5 while matching its quality.", "footnote": null, "region": "us", "min_price": 42000}, {"id": "hyundai-palisade", "name": "Hyundai Palisade", "subtitle": "2020-2022", "images": ["images/hyundai-palisade/front.jpg", "images/hyundai-palisade/rear.jpg", "images/hyundai-palisade/interior.jpg", "images/hyundai-palisade/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "19/24", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.8L V6", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$26k-$34k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["Exceptionally quiet and comfortable cabin", "Generous standard features", "Spacious third row that adults can use"], "cons": ["V6 feels underpowered when fully loaded", "Not sporty or exciting to drive", "Dealer markups have been rampant"], "vibe": "Three-row family hauler that feels like a luxury SUV at a mainstream price.", "footnote": null, "region": "us", "min_price": 26000}, {"id": "hyundai-santa-cruz", "name": "Hyundai Santa Cruz", "subtitle": "2022-2024", "images": ["images/hyundai-santa-cruz/front.jpg", "images/hyundai-santa-cruz/rear.jpg", "images/hyundai-santa-cruz/interior.jpg", "images/hyundai-santa-cruz/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "19/27", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "6.6s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.6 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$24k-$30k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Lockable tonneau cover for secure storage", "Drives like a crossover, hauls like a truck", "Turbo engine has real punch"], "cons": ["Bed is tiny for serious truck work", "Rear seat legroom is tight", "Polarizing styling"], "vibe": "Sport adventure vehicle that blurs the line between SUV and pickup.", "footnote": null, "region": "us", "min_price": 24000}, {"id": "hyundai-santa-fe", "name": "Hyundai Santa Fe", "subtitle": "2019-2023", "images": ["images/hyundai-santa-fe/front.jpg", "images/hyundai-santa-fe/rear.jpg", "images/hyundai-santa-fe/interior.jpg", "images/hyundai-santa-fe/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "21/28", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "6.6s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "3,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$18k-$24k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Striking new design stands out in traffic", "Surprisingly spacious cargo area", "Strong turbo engine is standard"], "cons": ["Ride can be firm on rough roads", "No third-row option anymore", "Infotainment screen placement is unusual"], "vibe": "Boldly redesigned two-row SUV with boxy looks and big interior space.", "footnote": null, "region": "us", "min_price": 18000}, {"id": "hyundai-santa-fe-hybrid", "name": "Hyundai Santa Fe Hybrid", "subtitle": "2022-2023", "images": ["images/hyundai-santa-fe-hybrid/front.jpg", "images/hyundai-santa-fe-hybrid/rear.jpg", "images/hyundai-santa-fe-hybrid/interior.jpg", "images/hyundai-santa-fe-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "7.8s", "note": null}, {"icon": "engine", "label": "Engine", "value": "1.6L Turbo I4 Hybrid", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$26k-$32k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["~37 mpg combined is excellent for an SUV", "Same bold styling as gas model", "AWD is standard"], "cons": ["Towing drops to 2,000 lbs", "Turbo-hybrid powertrain has lag", "Higher price than base gas model"], "vibe": "Fuel-efficient Santa Fe that sips gas without sacrificing space.", "footnote": null, "region": "us", "min_price": 26000}, {"id": "hyundai-santa-fe-plug-in-hybrid", "name": "Hyundai Santa Fe Plug-in Hybrid", "subtitle": "2022-2023", "images": ["images/hyundai-santa-fe-plug-in-hybrid/front.jpg", "images/hyundai-santa-fe-plug-in-hybrid/rear.jpg", "images/hyundai-santa-fe-plug-in-hybrid/interior.jpg", "images/hyundai-santa-fe-plug-in-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "7.5s", "note": null}, {"icon": "engine", "label": "Engine", "value": "1.6L Turbo I4 PHEV", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$28k-$35k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["~30 miles EV range covers most commutes", "Federal tax credit eligible", "All-electric driving around town"], "cons": ["Heavy battery adds weight", "Cargo space slightly reduced", "Charging infrastructure still growing"], "vibe": "30+ miles of electric range for commuters who want an SUV.", "footnote": null, "region": "us", "min_price": 28000}, {"id": "hyundai-tucson", "name": "Hyundai Tucson", "subtitle": "2021-2024", "images": ["images/hyundai-tucson/front.jpg", "images/hyundai-tucson/rear.jpg", "images/hyundai-tucson/interior.jpg", "images/hyundai-tucson/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "23/29", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.7s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$20k-$26k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Bold parametric design language", "Generous standard safety features", "Comfortable ride quality"], "cons": ["Base engine feels sluggish", "Infotainment can be laggy", "Towing is limited to 2,000 lbs"], "vibe": "Sharp-looking compact SUV with angular styling and solid value.", "footnote": null, "region": "us", "min_price": 20000}, {"id": "hyundai-tucson-diesel", "name": "Hyundai Tucson Diesel", "subtitle": "2019", "images": ["images/hyundai-tucson-diesel/front.jpg", "images/hyundai-tucson-diesel/rear.jpg", "images/hyundai-tucson-diesel/interior.jpg", "images/hyundai-tucson-diesel/side.jpg"], "badge": "DIESEL", "stats": [{"icon": "gauge", "label": "0-60", "value": "9.5s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.0L Turbo Diesel I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "3,900 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "\u20ac16k-\u20ac22k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Excellent highway fuel economy", "Strong low-end torque for towing", "Well-suited for European driving patterns"], "cons": ["Not available in North America", "Diesel is slower to accelerate", "Higher maintenance costs than petrol"], "vibe": "European diesel variant built for long highway hauls.", "footnote": null, "region": "eu", "min_price": 16000}, {"id": "hyundai-tucson-hybrid", "name": "Hyundai Tucson Hybrid", "subtitle": "2022-2024", "images": ["images/hyundai-tucson-hybrid/front.jpg", "images/hyundai-tucson-hybrid/rear.jpg", "images/hyundai-tucson-hybrid/interior.jpg", "images/hyundai-tucson-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "7.4s", "note": null}, {"icon": "engine", "label": "Engine", "value": "1.6L Turbo I4 Hybrid", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$24k-$30k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["~38 mpg combined is class-leading", "Same sharp styling as gas model", "AWD standard on all hybrid trims"], "cons": ["Transmission can be hesitant", "No significant performance improvement", "Limited towing capacity"], "vibe": "Best-selling compact SUV hybrid with 38 mpg combined.", "footnote": null, "region": "us", "min_price": 24000}, {"id": "hyundai-tucson-plug-in-hybrid", "name": "Hyundai Tucson Plug-in Hybrid", "subtitle": "2024", "images": ["images/hyundai-tucson-plug-in-hybrid/front.jpg", "images/hyundai-tucson-plug-in-hybrid/rear.jpg", "images/hyundai-tucson-plug-in-hybrid/interior.jpg", "images/hyundai-tucson-plug-in-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "7.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "1.6L Turbo I4 PHEV", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$32k-$38k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["33-mile EV range for daily commutes", "261 hp combined system output", "Federal tax credit eligible"], "cons": ["Price premium over hybrid is significant", "Charging adds daily routine step", "Cargo floor is slightly raised"], "vibe": "33 miles of electric range in a compact SUV package.", "footnote": null, "region": "us", "min_price": 32000}, {"id": "jeep-grand-cherokee", "name": "Jeep Grand Cherokee", "subtitle": "2016-2021", "images": ["images/jeep-grand-cherokee/rear.jpg", "images/jeep-grand-cherokee/interior.jpg", "images/jeep-grand-cherokee/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "18/25", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "6.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.6L V6", "note": null}, {"icon": "drive", "label": "Drive", "value": "4WD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "10.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "7,200 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Selectable Full-Time 4WD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$16k-$24k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "2/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "4/5", "note": null}], "pros": ["Best-in-class off-road systems (Quadra-Trac II)", "Air suspension for adjustable ride height", "Premium interior in higher trims"], "cons": ["Reliability has been below average", "Fuel economy is poor", "Electronics can be glitchy"], "vibe": "The luxury off-roader with Jeep's legendary trail capability.", "footnote": "Requires: Adaptive Cruise Control (ACC)", "region": "us", "min_price": 16000}, {"id": "kia-sorento", "name": "Kia Sorento", "subtitle": "2018-2023", "images": ["images/kia-sorento/front.jpg", "images/kia-sorento/rear.jpg", "images/kia-sorento/interior.jpg", "images/kia-sorento/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "22/27", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "3,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$18k-$24k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Three rows in a midsize footprint", "Strong turbo engine is responsive", "10-year/100k powertrain warranty"], "cons": ["Third row is best for kids only", "Cargo space behind third row is tiny", "AWD not standard on all trims"], "vibe": "Three-row SUV that punches above its weight in features and style.", "footnote": null, "region": "us", "min_price": 18000}, {"id": "kia-sorento-hybrid", "name": "Kia Sorento Hybrid", "subtitle": "2021-2023", "images": ["images/kia-sorento-hybrid/front.jpg", "images/kia-sorento-hybrid/rear.jpg", "images/kia-sorento-hybrid/interior.jpg", "images/kia-sorento-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "36/33", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.6s", "note": null}, {"icon": "engine", "label": "Engine", "value": "1.6L Turbo I4 Hybrid", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$26k-$32k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["~37 mpg combined with AWD", "Same three-row layout as gas model", "Smooth hybrid transitions"], "cons": ["Towing drops significantly vs. gas model", "Some hesitation from the transmission", "Price premium over gas version"], "vibe": "Three-row hybrid SUV that delivers 37 mpg with AWD standard.", "footnote": null, "region": "us", "min_price": 26000}, {"id": "kia-sorento-plug-in-hybrid", "name": "Kia Sorento Plug-in Hybrid", "subtitle": "2022-2023", "images": ["images/kia-sorento-plug-in-hybrid/front.jpg", "images/kia-sorento-plug-in-hybrid/rear.jpg", "images/kia-sorento-plug-in-hybrid/interior.jpg", "images/kia-sorento-plug-in-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "7.2s", "note": null}, {"icon": "engine", "label": "Engine", "value": "1.6L Turbo I4 PHEV", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.3 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$28k-$34k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["32-mile EV range for short trips", "Federal tax credit eligible", "Three rows plus AWD plus plug-in"], "cons": ["Heavy battery affects handling", "Limited towing at 2,000 lbs", "PHEV trims are expensive"], "vibe": "32 miles of electric range in a three-row family SUV.", "footnote": null, "region": "us", "min_price": 28000}, {"id": "kia-telluride", "name": "Kia Telluride", "subtitle": "2020-2022", "images": ["images/kia-telluride/front.jpg", "images/kia-telluride/rear.jpg", "images/kia-telluride/interior.jpg", "images/kia-telluride/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "19/24", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "6.8s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.8L V6", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.4 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$28k-$34k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Best third row in the midsize class", "Premium look and feel throughout", "Strong towing for a unibody SUV"], "cons": ["V6 can feel strained when fully loaded", "No turbo or hybrid option yet", "Dealer markups have been persistent"], "vibe": "Full-size presence in a midsize package with a usable third row.", "footnote": null, "region": "us", "min_price": 28000}, {"id": "lincoln-aviator", "name": "Lincoln Aviator", "subtitle": "2020-2024", "images": ["images/lincoln-aviator/front.jpg", "images/lincoln-aviator/rear.jpg", "images/lincoln-aviator/interior.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "17/24", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "5.4s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.0L Twin-Turbo V6", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.6 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,600 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$30k-$40k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "2/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["400 hp twin-turbo V6 is effortless", "Whisper-quiet cabin", "Air suspension glides over rough roads"], "cons": ["Reliability has been problematic", "Complex tech can be glitchy", "Depreciation is steep"], "vibe": "American luxury meets twin-turbo V6 power in a serene three-row cruiser.", "footnote": "Requires: Co-Pilot360 Plus", "region": "us", "min_price": 30000}, {"id": "lincoln-aviator-plug-in-hybrid", "name": "Lincoln Aviator Plug-in Hybrid", "subtitle": "2020-2024", "images": ["images/lincoln-aviator-plug-in-hybrid/front.jpg", "images/lincoln-aviator-plug-in-hybrid/rear.jpg", "images/lincoln-aviator-plug-in-hybrid/interior.jpg", "images/lincoln-aviator-plug-in-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "5.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "3.0L Twin-Turbo V6 PHEV", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.6 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,600 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$32k-$42k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "2/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["494 hp combined output is exhilarating", "Electric-only mode for short trips", "All the Aviator luxury plus EV benefits"], "cons": ["21-mile EV range is modest", "Reliability concerns carry over", "Very expensive when loaded"], "vibe": "494 hp luxury PHEV with 21 miles of electric range.", "footnote": "Requires: Co-Pilot360 Plus", "region": "us", "min_price": 32000}, {"id": "ram-1500", "name": "Ram 1500", "subtitle": "2019-2024", "images": ["images/ram-1500/front.jpg", "images/ram-1500/rear.jpg", "images/ram-1500/interior.jpg", "images/ram-1500/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "19/24", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "5.9s", "note": null}, {"icon": "engine", "label": "Engine", "value": "5.7L V8", "note": null}, {"icon": "drive", "label": "Drive", "value": "4WD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "10.0 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "12,750 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Part-Time 4WD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$24k-$34k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "4/5", "note": null}], "pros": ["Best-in-class ride quality with coil springs", "Luxurious interior, especially in Longhorn/Limited", "Strong HEMI V8 towing capability"], "cons": ["HEMI fuel economy is poor", "Heavy and large for urban use", "eTorque mild hybrid adds complexity"], "vibe": "The comfort king of full-size trucks with a class-leading interior.", "footnote": "Requires: Adaptive Cruise Control (ACC)", "region": "us", "min_price": 24000}, {"id": "rivian-r1s", "name": "Rivian R1S", "subtitle": "2022-2024", "images": ["images/rivian-r1s/front.jpg", "images/rivian-r1s/rear.jpg", "images/rivian-r1s/interior.jpg", "images/rivian-r1s/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "3.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "Quad Electric Motors", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "14.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "7,700 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$52k-$65k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "5/5", "note": null}], "pros": ["Quad motors deliver insane acceleration", "Best-in-class ground clearance for an EV", "Three rows in a premium electric package"], "cons": ["Expensive with limited trim options", "Charging infrastructure still maturing", "Build quality inconsistencies reported"], "vibe": "Electric adventure SUV with supercar speed and three rows.", "footnote": null, "region": "eu", "min_price": 52000}, {"id": "rivian-r1t", "name": "Rivian R1T", "subtitle": "2022-2024", "images": ["images/rivian-r1t/front.jpg", "images/rivian-r1t/rear.jpg", "images/rivian-r1t/interior.jpg", "images/rivian-r1t/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "3.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "Quad Electric Motors", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "14.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "11,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$48k-$60k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "5/5", "note": null}], "pros": ["Gear tunnel is a genius storage solution", "Quad motors with tank-turn capability", "Adventure-ready with camp kitchen option"], "cons": ["Towing significantly reduces range", "Service network is still sparse", "Price puts it in luxury territory"], "vibe": "Electric pickup that can outrun sports cars and crawl boulders.", "footnote": null, "region": "eu", "min_price": 48000}, {"id": "skoda-karoq", "name": "Skoda Karoq", "subtitle": "2019-2023", "images": ["images/skoda-karoq/front.jpg", "images/skoda-karoq/rear.jpg", "images/skoda-karoq/interior.jpg", "images/skoda-karoq/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "8.4s", "note": null}, {"icon": "engine", "label": "Engine", "value": "1.5L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "FWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.5 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,200 lbs", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "\u20ac16k-\u20ac22k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["VarioFlex rear seats are removable", "Solid VW Group mechanicals", "Good value vs. VW Tiguan"], "cons": ["Not available in North America", "Bland to drive", "FWD-only on most trims"], "vibe": "Practical compact SUV built on VW bones with clever storage solutions.", "footnote": "Requires: Adaptive Cruise Control (ACC) & Lane Assist", "region": "eu", "min_price": 16000}, {"id": "skoda-kodiaq", "name": "Skoda Kodiaq", "subtitle": "2017-2023", "images": ["images/skoda-kodiaq/front.jpg", "images/skoda-kodiaq/rear.jpg", "images/skoda-kodiaq/interior.jpg", "images/skoda-kodiaq/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "7.6s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.0L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.7 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "4,400 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "\u20ac18k-\u20ac26k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["Seven seats with usable third row", "Strong towing for the class", "Clever storage throughout the cabin"], "cons": ["Not sold in North America", "Diesel models being phased out", "Driving dynamics are utilitarian"], "vibe": "Seven-seat SUV with VW Atlas DNA at a lower European price.", "footnote": "Requires: Adaptive Cruise Control (ACC) & Lane Assist", "region": "eu", "min_price": 18000}, {"id": "skoda-octavia-scout", "name": "Skoda Octavia Scout", "subtitle": "2017-2019", "images": ["images/skoda-octavia-scout/front.jpg", "images/skoda-octavia-scout/rear.jpg", "images/skoda-octavia-scout/interior.jpg", "images/skoda-octavia-scout/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "7.8s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.0L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.1 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "4,400 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "\u20ac16k-\u20ac22k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Massive boot space in estate form", "AWD with raised ride height", "Practical workhorse for rural roads"], "cons": ["Not available in North America", "Not a real off-roader despite the look", "Interior is functional, not exciting"], "vibe": "Lifted estate with AWD for light trails and muddy fields.", "footnote": "Requires: Adaptive Cruise Control (ACC) & Lane Assist", "region": "eu", "min_price": 16000}, {"id": "subaru-ascent", "name": "Subaru Ascent", "subtitle": "2019-2021", "images": ["images/subaru-ascent/front.jpg", "images/subaru-ascent/rear.jpg", "images/subaru-ascent/interior.jpg", "images/subaru-ascent/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "7.6s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.4L Turbo Boxer H4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.7 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time Symmetrical AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$20k-$26k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["Symmetrical AWD is standard", "Spacious three-row interior", "Strong safety ratings"], "cons": ["CVT can drone and hesitate", "Fuel economy is mediocre for a four-cylinder", "Not exciting to drive"], "vibe": "Subaru's largest, a three-row family hauler with standard AWD.", "footnote": "Requires: EyeSight with Lane Keep Assist", "region": "us", "min_price": 20000}, {"id": "subaru-crosstrek", "name": "Subaru Crosstrek", "subtitle": "2018-2023", "images": ["images/subaru-crosstrek/front.jpg", "images/subaru-crosstrek/rear.jpg", "images/subaru-crosstrek/interior.jpg", "images/subaru-crosstrek/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "28/33", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "8.3s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L Boxer H4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.7 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "3,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time Symmetrical AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$18k-$24k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Best-in-class ground clearance for its size", "Symmetrical AWD handles all conditions", "Available manual transmission"], "cons": ["Base engine is slow", "CVT drones at highway speeds", "Interior feels basic at lower trims"], "vibe": "Compact crossover with serious ground clearance and standard AWD.", "footnote": "Requires: EyeSight with Lane Keep Assist", "region": "us", "min_price": 18000}, {"id": "subaru-forester", "name": "Subaru Forester", "subtitle": "2019-2021", "images": ["images/subaru-forester/front.jpg", "images/subaru-forester/rear.jpg", "images/subaru-forester/interior.jpg", "images/subaru-forester/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "26/33", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "8.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L Boxer H4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.7 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "1,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time Symmetrical AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$20k-$26k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["Excellent outward visibility", "Standard AWD with X-MODE", "Top safety ratings across the board"], "cons": ["Underpowered engine", "Towing capacity is very limited", "Road noise at highway speeds"], "vibe": "Practical, safe, and capable all-weather crossover with great visibility.", "footnote": "Requires: EyeSight with Lane Keep Assist", "region": "us", "min_price": 20000}, {"id": "subaru-outback", "name": "Subaru Outback", "subtitle": "2020-2022", "images": ["images/subaru-outback/front.jpg", "images/subaru-outback/rear.jpg", "images/subaru-outback/interior.jpg", "images/subaru-outback/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "26/33", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "6.1s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L Boxer H4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.7 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "3,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time Symmetrical AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$22k-$28k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Wagon versatility with SUV ground clearance", "Available turbo boxer engine", "EyeSight safety suite is excellent"], "cons": ["Base engine is adequate but not thrilling", "CVT transmission is uninspiring", "Interior materials are plain at base trims"], "vibe": "Lifted wagon that bridges the gap between car and SUV perfectly.", "footnote": "Requires: EyeSight with Lane Keep Assist", "region": "us", "min_price": 22000}, {"id": "subaru-xv", "name": "Subaru XV", "subtitle": "2018-2021", "images": ["images/subaru-xv/front.jpg", "images/subaru-xv/rear.jpg", "images/subaru-xv/interior.jpg", "images/subaru-xv/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "28/33", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "8.3s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.0L Boxer H4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.7 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "1,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time Symmetrical AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "\u20ac16k-\u20ac22k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "4/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Excellent ground clearance for a compact", "Symmetrical AWD is standard", "Good resale value"], "cons": ["2.0L engine feels underpowered", "CVT limits engagement", "Interior is functional, not fancy"], "vibe": "The Crosstrek by its global name, same capability and value.", "footnote": "Requires: EyeSight with Lane Keep Assist", "region": "us", "min_price": 16000}, {"id": "toyota-highlander", "name": "Toyota Highlander", "subtitle": "2017-2023", "images": ["images/toyota-highlander/front.jpg", "images/toyota-highlander/rear.jpg", "images/toyota-highlander/interior.jpg", "images/toyota-highlander/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "21/28", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.1s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.4L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.0 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$20k-$28k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "5/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["Toyota reliability is unmatched", "Comfortable three-row seating", "Strong resale value"], "cons": ["New turbo four lacks V6 smoothness", "Boring to drive", "Infotainment is basic compared to rivals"], "vibe": "The reliable three-row choice that never lets families down.", "footnote": "Requires: Toyota Safety Sense P (TSS-P)", "region": "us", "min_price": 20000}, {"id": "toyota-highlander-hybrid", "name": "Toyota Highlander Hybrid", "subtitle": "2017-2023", "images": ["images/toyota-highlander-hybrid/front.jpg", "images/toyota-highlander-hybrid/rear.jpg", "images/toyota-highlander-hybrid/interior.jpg", "images/toyota-highlander-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "35/35", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.3s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L I4 Hybrid", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.0 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "3,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Electronic AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$22k-$30k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "5/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["~36 mpg combined is excellent for a three-row", "Toyota hybrid reliability is legendary", "Electronic AWD with no driveshaft"], "cons": ["Towing drops vs. gas model", "CVT can drone under load", "Not engaging to drive"], "vibe": "Fuel-efficient three-row that Toyota will still be making when the sun dies.", "footnote": "Requires: Toyota Safety Sense P (TSS-P)", "region": "us", "min_price": 22000}, {"id": "toyota-rav4", "name": "Toyota RAV4", "subtitle": "2016-2022", "images": ["images/toyota-rav4/rear.jpg", "images/toyota-rav4/interior.jpg", "images/toyota-rav4/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "25/33", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "8.0s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.4 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "3,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$16k-$22k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "5/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["Toyota reliability and resale value", "TRD Off-Road trim is surprisingly capable", "Spacious for a compact SUV"], "cons": ["Engine is noisy under acceleration", "Interior materials feel basic", "Not fun to drive"], "vibe": "America's best-selling SUV does everything well enough to dominate.", "footnote": "Requires: Toyota Safety Sense P (TSS-P)", "region": "us", "min_price": 16000}, {"id": "toyota-rav4-hybrid", "name": "Toyota RAV4 Hybrid", "subtitle": "2016-2025", "images": ["images/toyota-rav4-hybrid/front.jpg", "images/toyota-rav4-hybrid/rear.jpg", "images/toyota-rav4-hybrid/interior.jpg", "images/toyota-rav4-hybrid/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "41/38", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.4s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.5L I4 Hybrid", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.4 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "2,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Electronic AWD", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$18k-$25k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "5/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["~40 mpg combined is outstanding", "More power than gas RAV4", "Electronic AWD works seamlessly"], "cons": ["CVT can be noisy under load", "Towing drops vs. gas model", "Long dealer wait times due to demand"], "vibe": "The RAV4 but with 40 mpg and electronic AWD. Basically the default choice.", "footnote": "Requires: Toyota Safety Sense P (TSS-P)", "region": "us", "min_price": 18000}, {"id": "volkswagen-atlas", "name": "Volkswagen Atlas", "subtitle": "2018-2023", "images": ["images/volkswagen-atlas/front.jpg", "images/volkswagen-atlas/rear.jpg", "images/volkswagen-atlas/interior.jpg", "images/volkswagen-atlas/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "20/24", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.3s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.0L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.0 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD (4MOTION)", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$18k-$24k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["Truly spacious three-row interior", "Simple, easy-to-use controls", "Competitive pricing for its size"], "cons": ["Turbo four feels strained in a big SUV", "VW reliability concerns", "Fuel economy is mediocre"], "vibe": "VW's biggest SUV, built for American families who need space.", "footnote": "Requires: Adaptive Cruise Control (ACC) & Lane Assist", "region": "us", "min_price": 18000}, {"id": "volkswagen-atlas-cross-sport", "name": "Volkswagen Atlas Cross Sport", "subtitle": "2020-2022", "images": ["images/volkswagen-atlas-cross-sport/front.jpg", "images/volkswagen-atlas-cross-sport/rear.jpg", "images/volkswagen-atlas-cross-sport/interior.jpg", "images/volkswagen-atlas-cross-sport/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "20/24", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.1s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.0L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "8.0 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "5,000 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD (4MOTION)", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$22k-$28k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "2/5", "note": null}], "pros": ["More cargo room than three-row Atlas", "Sleeker styling with coupe roofline", "Same spacious cabin without third row"], "cons": ["Turbo four is adequate, not quick", "No third row limits family appeal", "VW reliability is average at best"], "vibe": "Two-row Atlas with a sportier roofline and more cargo space.", "footnote": "Requires: Adaptive Cruise Control (ACC) & Lane Assist", "region": "us", "min_price": 22000}, {"id": "volkswagen-tiguan", "name": "Volkswagen Tiguan", "subtitle": "2018-2024", "images": ["images/volkswagen-tiguan/front.jpg", "images/volkswagen-tiguan/rear.jpg", "images/volkswagen-tiguan/interior.jpg", "images/volkswagen-tiguan/side.jpg"], "badge": null, "stats": [{"icon": "fuel", "label": "MPG", "value": "22/29", "note": "city/hwy"}, {"icon": "gauge", "label": "0-60", "value": "7.8s", "note": null}, {"icon": "engine", "label": "Engine", "value": "2.0L Turbo I4", "note": null}, {"icon": "drive", "label": "Drive", "value": "AWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "1,500 lbs", "note": null}, {"icon": "compass", "label": "4WD Type", "value": "Full-Time AWD (4MOTION)", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "$16k-$22k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["Composed handling for a crossover", "Available third row for occasional use", "Refined ride quality"], "cons": ["Towing capacity is very low", "Interior space trails key rivals", "Turbo four is adequate, not exciting"], "vibe": "Compact VW crossover with European handling and available third row.", "footnote": "Requires: Adaptive Cruise Control (ACC) & Lane Assist", "region": "us", "min_price": 16000}, {"id": "volkswagen-tiguan-ehybrid", "name": "Volkswagen Tiguan eHybrid", "subtitle": "2021-2023", "images": ["images/volkswagen-tiguan-ehybrid/front.jpg", "images/volkswagen-tiguan-ehybrid/rear.jpg", "images/volkswagen-tiguan-ehybrid/interior.jpg", "images/volkswagen-tiguan-ehybrid/side.jpg"], "badge": null, "stats": [{"icon": "gauge", "label": "0-60", "value": "7.5s", "note": null}, {"icon": "engine", "label": "Engine", "value": "1.4L Turbo I4 PHEV", "note": null}, {"icon": "drive", "label": "Drive", "value": "FWD", "note": null}, {"icon": "clearance", "label": "Clearance", "value": "7.9 in", "note": null}, {"icon": "tow", "label": "Towing", "value": "1,500 lbs", "note": null}, {"icon": "dollar", "label": "Price Range", "value": "\u20ac22k-\u20ac30k", "note": "used market"}, {"icon": "wrench", "label": "Reliability", "value": "3/5", "note": null}, {"icon": "bolt", "label": "Fun Factor", "value": "3/5", "note": null}], "pros": ["~30 miles EV range for city driving", "Smooth hybrid powertrain", "Lower running costs in urban use"], "cons": ["Not available in North America", "FWD only limits bad-weather confidence", "Battery reduces cargo space slightly"], "vibe": "European plug-in hybrid Tiguan with ~30 miles of electric range.", "footnote": "Requires: Adaptive Cruise Control (ACC) & Lane Assist", "region": "eu", "min_price": 22000}];
+const STORAGE_KEY = "swipestack_or";
+
+const ICONS = {
+  fuel:'<svg viewBox="0 0 24 24"><path d="M19.77 7.23l.01-.01-3.72-3.72L14.65 4.9l2.5 2.5c-.95.4-1.62 1.33-1.62 2.42 0 1.45 1.18 2.63 2.63 2.63.34 0 .66-.07.96-.18V18c0 .55-.45 1-1 1s-1-.45-1-1v-3c0-1.1-.9-2-2-2h-1V5c0-1.1-.9-2-2-2H6C4.9 3 4 3.9 4 5v14c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-5h1v3c0 1.66 1.34 3 3 3s3-1.34 3-3V9c0-.69-.28-1.32-.73-1.77zM12 10H6V5h6v5z"/></svg>',
+  gauge:'<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm4.24-12.24L11 13l-1.41-1.41a2 2 0 10-2.83 2.83l2.83 2.83a2 2 0 002.82 0l6.24-6.24a2 2 0 00-2.83-2.83l-.58.58z"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24"><path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z"/></svg>',
+  wrench:'<svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>',
+  engine:'<svg viewBox="0 0 24 24"><path d="M7 4v2h3v2H4c-1.1 0-2 .9-2 2v5c0 1.1.9 2 2 2h1v3h2v-3h6v3h2v-3h1c1.1 0 2-.9 2-2v-1h2v-4h-2V10c0-1.1-.9-2-2-2h-3V6h3V4H7zm9 6v5H6v-5h10z"/></svg>',
+  dollar:'<svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>',
+  drive:'<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-12c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>',
+  car:'<svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>',
+  clearance:'<svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18L2 8l2 2 8-5 8 5 2-2-10-6zm0 6L7.5 11 6 12l6 4 6-4-1.5-1L12 8z"/></svg>',
+  tow:'<svg viewBox="0 0 24 24"><path d="M18 18h-1V7.17c0-.53-.21-1.04-.59-1.41L12.83 2.17 11.42 3.58 15 7.17V18H9V7.17L12.58 3.58 11.17 2.17 7.59 5.76C7.21 6.13 7 6.64 7 7.17V18H6c-.55 0-1 .45-1 1s.45 1 1 1h12c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>',
+  power:'<svg viewBox="0 0 24 24"><path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
+  x:'<svg viewBox="0 0 24 24"><path d="M18.3 5.71a1 1 0 00-1.41 0L12 10.59 7.11 5.7A1 1 0 105.7 7.11L10.59 12 5.7 16.89a1 1 0 101.41 1.41L12 13.41l4.89 4.89a1 1 0 001.41-1.41L13.41 12l4.89-4.89a1 1 0 000-1.4z"/></svg>',
+  heart:'<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
+  undo:'<svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05 1.04-6.83 2.73L2.5 7.5v9h9l-3.19-3.19C9.76 12.07 11.07 11.5 12.5 11.5c3.03 0 5.55 2.12 6.2 4.97l2.93-.82C20.6 11.37 16.9 8 12.5 8z"/></svg>',
+  info:'<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>',
+  compass:'<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-5.31-7.87l8.18-3.18-3.18 8.18-8.18 3.18 3.18-8.18zM12 11c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>',
+};
+
+function getIcon(name) { return ICONS[name] || ICONS.info; }
+
+let allItems = [...ITEMS];
+let deck = [];
+let likes = JSON.parse(localStorage.getItem(STORAGE_KEY+'_likes')||'[]');
+let seen = JSON.parse(localStorage.getItem(STORAGE_KEY+'_seen')||'[]');
+let region = localStorage.getItem(STORAGE_KEY+'_region')||'us';
+let budget = parseInt(localStorage.getItem(STORAGE_KEY+'_budget')||'0',10)||0; // 0 = no limit
+let history = [];
+let swiping = false;
+let startX=0,startY=0,currentX=0,isDragging=false,isScrolling=false;
+let imgTouchStartX=0,imgTouchStartY=0,imgIsDragging=false,imgSwipeActive=false;
+
+function save() {
+  localStorage.setItem(STORAGE_KEY+'_likes',JSON.stringify(likes));
+  localStorage.setItem(STORAGE_KEY+'_seen',JSON.stringify(seen));
+  localStorage.setItem(STORAGE_KEY+'_region',region);
+  if(budget>0) localStorage.setItem(STORAGE_KEY+'_budget',budget);
+  else localStorage.removeItem(STORAGE_KEY+'_budget');
+  document.getElementById('likesCount').textContent=likes.length;
+}
+
+function getFilteredItems() {
+  let items=allItems;
+  if(region==='us') items=items.filter(i=>i.region!=='eu');
+  if(budget>0) items=items.filter(i=>!i.min_price||i.min_price<=budget);
+  return items;
+}
+
+function buildDeck() {
+  const filtered=getFilteredItems();
+  deck=filtered.filter(i=>!seen.includes(i.id));
+  renderCards();
+  updateCounter();
+  updateEndScreen();
+}
+
+function updateCounter() {
+  const filtered=getFilteredItems();
+  const remaining=deck.length;
+  const total=filtered.length;
+  const el=document.getElementById('counter');
+  if(total>0) el.textContent=(total-remaining+1>total?total:total-remaining+1)+'/'+total;
+  else el.textContent='';
+}
+
+function updateEndScreen() {
+  const container=document.getElementById('cardContainer');
+  const end=document.getElementById('endScreen');
+  if(deck.length===0) {
+    container.innerHTML='';
+    const total=getFilteredItems().length;
+    document.getElementById('endTitle').textContent="All "+total+" cars reviewed";
+    document.getElementById('endSub').textContent=likes.length+" liked";
+    end.classList.add('visible');
+  } else {
+    end.classList.remove('visible');
+  }
+}
+
+/* BUDGET */
+function initBudget() {
+  const prices=allItems.map(i=>i.min_price||0).filter(p=>p>0);
+  if(prices.length===0) return;
+  const maxP=Math.max(...prices);
+  const slider=document.getElementById('budgetSlider');
+  // Slider from 5k to max price in 5k steps, plus 0=any
+  const step=5000;
+  const maxVal=Math.ceil(maxP/step)*step;
+  slider.min=0;
+  slider.max=maxVal;
+  slider.step=step;
+  slider.value=budget>0?budget:maxVal;
+  updateBudgetLabel(budget>0?budget:0);
+}
+function onBudget(val) {
+  val=parseInt(val,10);
+  const slider=document.getElementById('budgetSlider');
+  const maxVal=parseInt(slider.max,10);
+  if(val>=maxVal) {
+    budget=0;
+    updateBudgetLabel(0);
+  } else {
+    budget=val;
+    updateBudgetLabel(val);
+  }
+  save();
+  // Reset seen to re-show cards within budget
+  seen=[];history=[];save();
+  buildDeck();
+}
+function updateBudgetLabel(val) {
+  const el=document.getElementById('budgetVal');
+  if(val<=0) el.textContent='Any';
+  else if(val>=1000) el.textContent='$'+Math.round(val/1000)+'k';
+  else el.textContent='$'+val;
+}
+
+/* REGION */
+function setRegion(r) {
+  region=r;
+  document.getElementById('regionUs').classList.toggle('active',r==='us');
+  document.getElementById('regionAll').classList.toggle('active',r==='all');
+  save();buildDeck();
+}
+
+/* CARD RENDERING */
+function renderCards() {
+  const container=document.getElementById('cardContainer');
+  container.innerHTML='';
+  if(deck.length===0) return;
+  const max=Math.min(deck.length,3);
+  for(let i=max-1;i>=0;i--) container.appendChild(createCard(deck[i],i));
+}
+
+function createCard(item,stackIndex) {
+  const card=document.createElement('div');
+  card.className='card'+(stackIndex===0?' active entering':stackIndex===1?' next':' third');
+  card.dataset.id=item.id;
+  card.innerHTML='<div class="stamp stamp-like">LIKE</div><div class="stamp stamp-nope">NOPE</div>';
+
+  const imgArea=document.createElement('div');
+  imgArea.className='card-images';
+  if(item.images&&item.images.length>0) {
+    item.images.forEach((src,idx)=>{
+      const img=document.createElement('img');
+      img.src=src;img.alt=item.name;
+      img.loading=idx<2?'eager':'lazy';
+      if(idx===0) img.classList.add('visible');
+      imgArea.appendChild(img);
+    });
+    if(item.images.length>1) {
+      const dots=document.createElement('div');
+      dots.className='img-dots';
+      item.images.forEach((_,idx)=>{
+        const d=document.createElement('span');
+        if(idx===0) d.classList.add('active');
+        dots.appendChild(d);
+      });
+      imgArea.appendChild(dots);
+      const tapL=document.createElement('div');
+      tapL.className='img-tap-zone left';
+      tapL.addEventListener('click',e=>{e.stopPropagation();changeImg(card,-1);});
+      imgArea.appendChild(tapL);
+      const tapR=document.createElement('div');
+      tapR.className='img-tap-zone right';
+      tapR.addEventListener('click',e=>{e.stopPropagation();changeImg(card,1);});
+      imgArea.appendChild(tapR);
+    }
+  } else {
+    imgArea.innerHTML='<div class="img-placeholder">'+ICONS.car+'</div>';
+  }
+  card.appendChild(imgArea);
+
+  const profile=document.createElement('div');
+  profile.className='card-profile';
+  let h='';
+  if(item.badge) h+='<div class="card-badge">'+getIcon('fuel')+' '+esc(item.badge)+'</div>';
+  h+='<div class="card-name">'+esc(item.name)+'</div>';
+  h+='<div class="card-subtitle">'+esc(item.subtitle)+'</div>';
+  if(item.stats&&item.stats.length>0) {
+    h+='<div class="stats-grid">';
+    item.stats.forEach(s=>{
+      h+='<div class="stat">'+getIcon(s.icon)+'<div class="stat-text"><span class="stat-label">'+esc(s.label)+'</span><span class="stat-value">'+esc(s.value)+'</span>'+(s.note?'<span class="stat-note">'+esc(s.note)+'</span>':'')+'</div></div>';
+    });
+    h+='</div>';
+  }
+  if((item.pros&&item.pros.length)||(item.cons&&item.cons.length)) {
+    h+='<div class="pros-cons">';
+    if(item.pros) {h+='<ul>';item.pros.forEach(p=>{h+='<li class="pro">'+ICONS.check+' '+esc(p)+'</li>';});h+='</ul>';}
+    if(item.cons) {h+='<ul>';item.cons.forEach(c=>{h+='<li class="con">'+ICONS.x+' '+esc(c)+'</li>';});h+='</ul>';}
+    h+='</div>';
+  }
+  if(item.vibe) h+='<div class="card-vibe">'+esc(item.vibe)+'</div>';
+  if(item.footnote) h+='<div class="card-footnote">'+esc(item.footnote)+'</div>';
+  profile.innerHTML=h;
+  card.appendChild(profile);
+
+  if(stackIndex===0) {setupSwipe(card);card._imgIndex=0;}
+  return card;
+}
+
+function esc(s) {if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+function changeImg(card,dir) {
+  const imgs=card.querySelectorAll('.card-images img');
+  const dots=card.querySelectorAll('.img-dots span');
+  if(imgs.length<2) return;
+  let idx=(card._imgIndex||0)+dir;
+  if(idx<0)idx=0;if(idx>=imgs.length)idx=imgs.length-1;
+  card._imgIndex=idx;
+  imgs.forEach((img,i)=>img.classList.toggle('visible',i===idx));
+  dots.forEach((d,i)=>d.classList.toggle('active',i===idx));
+}
+
+/* SWIPE */
+function setupSwipe(card) {
+  const imgArea=card.querySelector('.card-images');
+  imgArea.addEventListener('touchstart',onImgTouchStart,{passive:true});
+  imgArea.addEventListener('touchmove',onImgTouchMove,{passive:false});
+  imgArea.addEventListener('touchend',onImgTouchEnd,{passive:true});
+  card.addEventListener('touchstart',onTouchStart,{passive:true});
+  card.addEventListener('touchmove',onTouchMove,{passive:false});
+  card.addEventListener('touchend',onTouchEnd,{passive:true});
+  card.addEventListener('mousedown',onMouseDown);
+}
+
+function onImgTouchStart(e) {imgTouchStartX=e.touches[0].clientX;imgTouchStartY=e.touches[0].clientY;imgIsDragging=false;imgSwipeActive=false;}
+function onImgTouchMove(e) {
+  const dx=e.touches[0].clientX-imgTouchStartX;
+  const dy=e.touches[0].clientY-imgTouchStartY;
+  if(!imgIsDragging) {if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)*1.5){imgIsDragging=true;imgSwipeActive=true;e.preventDefault();}}
+  else e.preventDefault();
+}
+function onImgTouchEnd(e) {
+  if(imgIsDragging) {
+    const dx=e.changedTouches[0].clientX-imgTouchStartX;
+    const card=e.currentTarget.closest('.card');
+    if(Math.abs(dx)>30) changeImg(card,dx<0?1:-1);
+    imgIsDragging=false;
+    setTimeout(()=>{imgSwipeActive=false;},50);
+  }
+}
+
+function onTouchStart(e) {
+  if(swiping||imgSwipeActive) return;
+  startX=e.touches[0].clientX;startY=e.touches[0].clientY;
+  isDragging=false;isScrolling=false;currentX=0;
+}
+function onTouchMove(e) {
+  if(swiping||imgSwipeActive) return;
+  const dx=e.touches[0].clientX-startX;
+  const dy=e.touches[0].clientY-startY;
+  if(!isDragging&&!isScrolling) {
+    if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>8){isScrolling=true;return;}
+    if(Math.abs(dx)>8) isDragging=true;
+  }
+  if(isScrolling||!isDragging) return;
+  e.preventDefault();
+  currentX=dx;
+  const card=e.currentTarget;
+  card.style.transition='none';
+  card.style.transform='translateX('+dx+'px) rotate('+(dx*0.05)+'deg)';
+  card.classList.toggle('swiping-right',dx>40);
+  card.classList.toggle('swiping-left',dx<-40);
+}
+function onTouchEnd(e) {
+  if(swiping||isScrolling||imgSwipeActive||!isDragging) return;
+  isDragging=false;
+  const card=e.currentTarget;
+  const threshold=window.innerWidth*0.35;
+  if(Math.abs(currentX)>threshold) commitSwipe(card,currentX>0?'right':'left');
+  else springBack(card);
+}
+
+let mouseCard=null;
+function onMouseDown(e) {
+  if(swiping||e.target.closest('button,a,.img-tap-zone')) return;
+  mouseCard=e.currentTarget;startX=e.clientX;currentX=0;isDragging=false;
+  document.addEventListener('mousemove',onMouseMove);
+  document.addEventListener('mouseup',onMouseUp);
+}
+function onMouseMove(e) {
+  if(!mouseCard||swiping) return;
+  const dx=e.clientX-startX;
+  if(!isDragging&&Math.abs(dx)>5) isDragging=true;
+  if(!isDragging) return;
+  currentX=dx;
+  mouseCard.style.transition='none';
+  mouseCard.style.transform='translateX('+dx+'px) rotate('+(dx*0.05)+'deg)';
+  mouseCard.classList.toggle('swiping-right',dx>40);
+  mouseCard.classList.toggle('swiping-left',dx<-40);
+}
+function onMouseUp() {
+  document.removeEventListener('mousemove',onMouseMove);
+  document.removeEventListener('mouseup',onMouseUp);
+  if(!mouseCard||!isDragging){mouseCard=null;return;}
+  const threshold=window.innerWidth*0.35;
+  if(Math.abs(currentX)>threshold) commitSwipe(mouseCard,currentX>0?'right':'left');
+  else springBack(mouseCard);
+  mouseCard=null;isDragging=false;
+}
+
+function springBack(card) {
+  card.style.transition='transform .25s cubic-bezier(0.175,0.885,0.32,1.275)';
+  card.style.transform='';
+  card.classList.remove('swiping-right','swiping-left');
+}
+
+function commitSwipe(card,dir) {
+  swiping=true;
+  const offX=dir==='right'?window.innerWidth*1.5:-window.innerWidth*1.5;
+  card.style.transition='transform .25s ease-out';
+  card.style.transform='translateX('+offX+'px) rotate('+(offX*0.04)+'deg)';
+  card.classList.add(dir==='right'?'swiping-right':'swiping-left');
+  const id=card.dataset.id;
+  const action=dir==='right'?'like':'pass';
+  setTimeout(()=>{
+    if(action==='like'&&!likes.includes(id)) likes.push(id);
+    if(!seen.includes(id)) seen.push(id);
+    history.push({id:id,action:action});
+    save();deck.shift();renderCards();updateCounter();updateEndScreen();swiping=false;
+  },250);
+}
+
+function doPass() {const c=document.querySelector('.card.active');if(c&&!swiping) commitSwipe(c,'left');}
+function doLike() {const c=document.querySelector('.card.active');if(c&&!swiping) commitSwipe(c,'right');}
+function doUndo() {
+  if(history.length===0||swiping) return;
+  const last=history.pop();
+  seen=seen.filter(id=>id!==last.id);
+  if(last.action==='like') likes=likes.filter(id=>id!==last.id);
+  save();buildDeck();
+}
+
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('likesScreen').classList.contains('visible')) return;
+  if(document.getElementById('modalOverlay').classList.contains('visible')) return;
+  if(e.key==='ArrowLeft') doPass();
+  if(e.key==='ArrowRight') doLike();
+  if((e.ctrlKey||e.metaKey)&&e.key==='z') doUndo();
+});
+
+function showLikes() {
+  const grid=document.getElementById('likesGrid');
+  grid.innerHTML='';
+  if(likes.length===0) {
+    grid.innerHTML='<div class="likes-empty">'+ICONS.heart+'<div>No likes yet</div></div>';
+  } else {
+    likes.forEach(id=>{
+      const item=allItems.find(i=>i.id===id);if(!item) return;
+      const el=document.createElement('div');el.className='likes-grid-item';
+      el.onclick=()=>showModal(item);
+      const thumb=(item.images&&item.images.length>0)?item.images[0]:'';
+      el.innerHTML=(thumb?'<img src="'+thumb+'" alt="'+esc(item.name)+'">':'<div class="img-placeholder">'+ICONS.car+'</div>')+
+        '<div class="likes-item-name">'+esc(item.name)+'</div>';
+      grid.appendChild(el);
+    });
+  }
+  document.getElementById('likesScreen').classList.add('visible');
+}
+function hideLikes() {document.getElementById('likesScreen').classList.remove('visible');}
+function copyLikes() {
+  const names=likes.map(id=>{const item=allItems.find(i=>i.id===id);return item?item.name:id;});
+  navigator.clipboard.writeText(names.join('\n')).then(()=>{
+    const btn=document.querySelector('.btn-copy');
+    btn.textContent='Copied!';setTimeout(()=>{btn.textContent='Copy List';},1500);
+  });
+}
+function startOver() {likes=[];seen=[];history=[];save();hideLikes();buildDeck();}
+
+function showModal(item) {
+  const modal=document.getElementById('modal');
+  let h='<button class="modal-close" onclick="closeModal()">'+ICONS.x+' Close</button>';
+  h+='<div class="card-images">';
+  if(item.images&&item.images.length>0) {
+    item.images.forEach((src,idx)=>{h+='<img src="'+src+'" alt="'+esc(item.name)+'"'+(idx===0?' class="visible"':'')+'>';});
+    if(item.images.length>1) {
+      h+='<div class="img-dots">';item.images.forEach((_,idx)=>{h+='<span'+(idx===0?' class="active"':'')+'></span>';});h+='</div>';
+      h+='<div class="img-tap-zone left" onclick="modalImg(-1)"></div>';
+      h+='<div class="img-tap-zone right" onclick="modalImg(1)"></div>';
+    }
+  } else h+='<div class="img-placeholder">'+ICONS.car+'</div>';
+  h+='</div>';
+  if(item.badge) h+='<div class="card-badge" style="position:relative;display:inline-flex;margin-bottom:6px;">'+getIcon('fuel')+' '+esc(item.badge)+'</div>';
+  h+='<div class="card-name" style="padding-right:0">'+esc(item.name)+'</div>';
+  h+='<div class="card-subtitle">'+esc(item.subtitle)+'</div>';
+  if(item.stats&&item.stats.length>0) {
+    h+='<div class="stats-grid" style="margin-top:10px">';
+    item.stats.forEach(s=>{h+='<div class="stat">'+getIcon(s.icon)+'<div class="stat-text"><span class="stat-label">'+esc(s.label)+'</span><span class="stat-value">'+esc(s.value)+'</span>'+(s.note?'<span class="stat-note">'+esc(s.note)+'</span>':'')+'</div></div>';});
+    h+='</div>';
+  }
+  if((item.pros&&item.pros.length)||(item.cons&&item.cons.length)) {
+    h+='<div class="pros-cons" style="margin-top:10px">';
+    if(item.pros){h+='<ul>';item.pros.forEach(p=>{h+='<li class="pro">'+ICONS.check+' '+esc(p)+'</li>';});h+='</ul>';}
+    if(item.cons){h+='<ul>';item.cons.forEach(c=>{h+='<li class="con">'+ICONS.x+' '+esc(c)+'</li>';});h+='</ul>';}
+    h+='</div>';
+  }
+  if(item.vibe) h+='<div class="card-vibe" style="margin-top:8px">'+esc(item.vibe)+'</div>';
+  if(item.footnote) h+='<div class="card-footnote">'+esc(item.footnote)+'</div>';
+  modal.innerHTML=h;modal._imgIndex=0;
+  document.getElementById('modalOverlay').classList.add('visible');
+}
+window.modalImg=function(dir){
+  const modal=document.getElementById('modal');
+  const imgs=modal.querySelectorAll('.card-images img');
+  const dots=modal.querySelectorAll('.img-dots span');
+  if(imgs.length<2) return;
+  let idx=(modal._imgIndex||0)+dir;
+  if(idx<0)idx=0;if(idx>=imgs.length)idx=imgs.length-1;
+  modal._imgIndex=idx;
+  imgs.forEach((img,i)=>img.classList.toggle('visible',i===idx));
+  dots.forEach((d,i)=>d.classList.toggle('active',i===idx));
+};
+function closeModal(e) {
+  if(e&&e.target!==document.getElementById('modalOverlay')&&e.type==='click') return;
+  document.getElementById('modalOverlay').classList.remove('visible');
+}
+
+function init() {
+  setRegion(region);
+  initBudget();
+  save();
+  buildDeck();
+}
+init();
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>

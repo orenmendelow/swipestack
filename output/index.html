@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111">
+<title>Swipestack</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f7f7f7;--card:#fff;--text:#111;--muted:#888;--border:rgba(0,0,0,0.08);}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#111;--card:#1c1c1e;--text:#eee;--muted:#777;--border:rgba(255,255,255,0.08);}
+}
+html,body{
+  min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;
+}
+.page{padding:calc(20px + env(safe-area-inset-top,0px)) 16px 40px;max-width:420px;margin:0 auto;}
+h1{font-size:28px;font-weight:800;margin-bottom:6px;}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:24px;}
+.deck-card{
+  display:flex;align-items:center;gap:14px;
+  padding:16px;margin-bottom:12px;
+  background:var(--card);border-radius:14px;
+  box-shadow:0 1px 8px rgba(0,0,0,0.06);
+  text-decoration:none;color:var(--text);
+  border:1px solid var(--border);
+}
+.deck-card:active{transform:scale(0.98);}
+.deck-icon{
+  width:52px;height:52px;border-radius:12px;
+  background:var(--border);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.deck-icon svg{width:28px;height:28px;fill:var(--text);}
+.deck-info{flex:1;}
+.deck-name{font-size:17px;font-weight:700;}
+.deck-count{font-size:13px;color:var(--muted);}
+.deck-arrow{fill:var(--muted);}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Swipestack</h1>
+  <div class="subtitle">Comma-compatible cars to swipe through</div>
+
+  <a href="hot_hatches.html" class="deck-card">
+    <div class="deck-icon">
+      <svg viewBox="0 0 24 24"><path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z"/></svg>
+    </div>
+    <div class="deck-info">
+      <div class="deck-name">Hot Hatches</div>
+      <div class="deck-count">16 cars</div>
+    </div>
+    <svg class="deck-arrow" viewBox="0 0 24 24" width="20" height="20"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+  </a>
+
+  <a href="off_roaders.html" class="deck-card">
+    <div class="deck-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-5.31-7.87l8.18-3.18-3.18 8.18-8.18 3.18 3.18-8.18zM12 11c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>
+    </div>
+    <div class="deck-info">
+      <div class="deck-name">Off-Roaders</div>
+      <div class="deck-count">50 cars</div>
+    </div>
+    <svg class="deck-arrow" viewBox="0 0 24 24" width="20" height="20"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+  </a>
+</div>
+</body>
+</html>
