@@ -1658,9 +1658,9 @@ CAR_DATA = {
     # All Vehicles — additional models (not in Hot Hatches or Off-Roaders)
     # ==========================================================================
     "Acura ILX": {
-        "reliability": "4/5", "fun_factor": "2/5", "zero_to_sixty": "7.4s",
+        "reliability": "4/5", "fun_factor": "2/5", "zero_to_sixty": "6.9s",
         "engine": "2.4L I4", "driven_wheels": "FWD",
-        "est_price_range": "$14k-$20k",
+        "est_price_range": "$10k-$16k",
         "description": "Entry-level Acura sedan based on the Civic platform.",
         "pros": ["Honda reliability", "Low ownership costs", "Comfortable ride"],
         "cons": ["Outdated interior tech", "No AWD option", "Modest power"],
@@ -2138,9 +2138,9 @@ CAR_DATA = {
         "cons": ["Not sold in US", "Slow", "Small cargo area"],
     },
     "Hyundai Nexo": {
-        "reliability": "3.5/5", "fun_factor": "2/5", "zero_to_sixty": "9.5s",
+        "reliability": "3.5/5", "fun_factor": "2/5", "zero_to_sixty": "9.2s",
         "engine": "Hydrogen Fuel Cell", "driven_wheels": "FWD",
-        "est_price_range": "$26k-$34k",
+        "est_price_range": "$6k-$10k",
         "description": "Hydrogen fuel cell SUV — the future that never quite arrived.",
         "pros": ["Zero emissions", "5-minute refueling", "380-mile range"],
         "cons": ["Almost no hydrogen stations", "FWD only", "Expensive to fuel where available"],
@@ -2436,7 +2436,7 @@ CAR_DATA = {
     "Nissan Leaf": {
         "reliability": "3.5/5", "fun_factor": "2/5", "zero_to_sixty": "7.4s",
         "engine": "Electric", "driven_wheels": "FWD",
-        "est_price_range": "$10k-$20k",
+        "est_price_range": "$8k-$13k",
         "description": "The OG affordable EV — cheap as chips used but limited range.",
         "pros": ["Incredibly affordable used", "Proven technology", "Zippy around town"],
         "cons": ["No thermal battery management (degradation)", "150-226 mile range", "Dated design"],
@@ -2524,15 +2524,15 @@ CAR_DATA = {
     "Tesla Model 3": {
         "reliability": "3/5", "fun_factor": "4.5/5", "zero_to_sixty": "3.1s",
         "engine": "Electric", "driven_wheels": "AWD",
-        "est_price_range": "$22k-$36k",
+        "est_price_range": "$16k-$24k",
         "description": "The EV that changed everything — still the benchmark for electric sedans.",
         "pros": ["Incredible acceleration", "Supercharger network", "Over-the-air updates"],
         "cons": ["Build quality inconsistencies", "Minimalist interior not for everyone", "No CarPlay/Android Auto"],
     },
     "Tesla Model Y": {
-        "reliability": "3/5", "fun_factor": "4/5", "zero_to_sixty": "4.8s",
+        "reliability": "3/5", "fun_factor": "4/5", "zero_to_sixty": "3.5s",
         "engine": "Electric", "driven_wheels": "AWD",
-        "est_price_range": "$26k-$40k",
+        "est_price_range": "$22k-$30k",
         "description": "The world's best-selling car — Tesla's crossover took over everything.",
         "pros": ["Huge cargo space", "Supercharger network", "OTA updates keep it fresh"],
         "cons": ["Build quality varies", "Firm ride", "Minimalist cabin divides opinion"],
@@ -2756,7 +2756,7 @@ CAR_DATA = {
     "Volkswagen e-Golf": {
         "reliability": "3.5/5", "fun_factor": "3/5", "zero_to_sixty": "9.6s",
         "engine": "Electric", "driven_wheels": "FWD",
-        "est_price_range": "$12k-$18k",
+        "est_price_range": "$8k-$14k",
         "description": "An electric Golf 7 — normal car that happens to be electric. 125-mile range.",
         "pros": ["Drives like a normal Golf", "Great value used", "Compact and city-friendly"],
         "cons": ["Only 125 miles of range", "Slow charging", "Discontinued"],
@@ -2810,9 +2810,9 @@ CAR_DATA = {
         "cons": ["Less fun than Golf", "Interior quality dropped", "FWD only"],
     },
     "Volkswagen Passat": {
-        "reliability": "3/5", "fun_factor": "2.5/5", "zero_to_sixty": "6.4s",
+        "reliability": "3/5", "fun_factor": "2.5/5", "zero_to_sixty": "7.5s",
         "engine": "2.0T I4", "driven_wheels": "FWD",
-        "est_price_range": "$12k-$22k",
+        "est_price_range": "$6k-$10k",
         "description": "Mid-size sedan that offers Euro feel at domestic prices.",
         "pros": ["Spacious cabin", "Comfortable highway cruiser", "Turbo has punch"],
         "cons": ["FWD only in US", "Dated interior on older models", "Discontinued in US"],
