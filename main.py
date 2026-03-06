@@ -507,8 +507,22 @@ def process_car(car, deck_type, cache):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-def generate_index(hh_items, or_items):
-    """Generate index.html main menu page."""
+def generate_index(decks):
+    """Generate index.html main menu page. decks = list of (name, filename, count, svg_icon)."""
+    cards_html = ""
+    for name, filename, count, svg_icon in decks:
+        cards_html += f"""
+  <a href="{filename}" class="deck-card">
+    <div class="deck-icon">
+      <svg viewBox="0 0 24 24"><path d="{svg_icon}"/></svg>
+    </div>
+    <div class="deck-info">
+      <div class="deck-name">{name}</div>
+      <div class="deck-count">{count} cars</div>
+    </div>
+    <svg class="deck-arrow" viewBox="0 0 24 24" width="20" height="20"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+  </a>"""
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -556,28 +570,7 @@ h1{{font-size:28px;font-weight:800;margin-bottom:6px;}}
 <div class="page">
   <h1>Swipestack</h1>
   <div class="subtitle">Comma-compatible cars to swipe through</div>
-
-  <a href="hot_hatches.html" class="deck-card">
-    <div class="deck-icon">
-      <svg viewBox="0 0 24 24"><path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z"/></svg>
-    </div>
-    <div class="deck-info">
-      <div class="deck-name">Hot Hatches</div>
-      <div class="deck-count">{len(hh_items)} cars</div>
-    </div>
-    <svg class="deck-arrow" viewBox="0 0 24 24" width="20" height="20"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
-  </a>
-
-  <a href="off_roaders.html" class="deck-card">
-    <div class="deck-icon">
-      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-5.31-7.87l8.18-3.18-3.18 8.18-8.18 3.18 3.18-8.18zM12 11c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>
-    </div>
-    <div class="deck-info">
-      <div class="deck-name">Off-Roaders</div>
-      <div class="deck-count">{len(or_items)} cars</div>
-    </div>
-    <svg class="deck-arrow" viewBox="0 0 24 24" width="20" height="20"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
-  </a>
+{cards_html}
 </div>
 </body>
 </html>"""
@@ -595,113 +588,138 @@ def get_local_ip():
     except Exception:
         return "localhost"
 
+def process_deck(cars, deck_type, cache):
+    """Process a list of cars in parallel. Returns list of item dicts."""
+    items = []
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {
+            executor.submit(process_car, car, deck_type, cache): car
+            for car in cars
+        }
+        for future in as_completed(futures):
+            try:
+                items.append(future.result())
+            except Exception as e:
+                car = futures[future]
+                print(f"  [!] Error processing {car['model']}: {e}")
+    items.sort(key=lambda x: x["name"])
+    return items
+
+
+# SVG icon paths for index page
+ICON_BOLT = "M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z"
+ICON_COMPASS = "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-5.31-7.87l8.18-3.18-3.18 8.18-8.18 3.18 3.18-8.18zM12 11c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"
+ICON_CAR = "M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"
+
+
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--deck", choices=["all", "hh", "or", "all_vehicles"], default="all",
+                        help="Which deck(s) to build: all, hh, or, all_vehicles")
+    args = parser.parse_args()
+
     print("Swipestack Car Deck Generator")
     print("=" * 40)
 
-    # Read Excel
     xlsx_path = DATA_DIR / "comma_vehicles.xlsx"
     if not xlsx_path.exists():
         print(f"[!] Excel file not found: {xlsx_path}")
         sys.exit(1)
 
     wb = openpyxl.load_workbook(xlsx_path)
-    hot_hatches = consolidate_cars(read_sheet(wb, "Hot Hatches"))
-    off_roaders = consolidate_cars(read_sheet(wb, "Off-Roaders"))
-
-    print(f"Hot Hatches: {len(hot_hatches)} models")
-    print(f"Off-Roaders: {len(off_roaders)} models")
-
-    # Load cache
     cache = load_cache()
 
-    # Process all cars in parallel
+    build_hh = args.deck in ("all", "hh")
+    build_or = args.deck in ("all", "or")
+    build_av = args.deck in ("all", "all_vehicles")
+
     all_items_hh = []
     all_items_or = []
+    all_items_av = []
 
-    print("\nFetching data + images...")
+    if build_hh:
+        hot_hatches = consolidate_cars(read_sheet(wb, "Hot Hatches"))
+        print(f"Hot Hatches: {len(hot_hatches)} models")
+        print("\nFetching Hot Hatches data + images...")
+        all_items_hh = process_deck(hot_hatches, "hot_hatch", cache)
+        save_cache(cache)
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures_hh = {
-            executor.submit(process_car, car, "hot_hatch", cache): car
-            for car in hot_hatches
-        }
-        futures_or = {
-            executor.submit(process_car, car, "off_roader", cache): car
-            for car in off_roaders
-        }
+    if build_or:
+        off_roaders = consolidate_cars(read_sheet(wb, "Off-Roaders"))
+        print(f"Off-Roaders: {len(off_roaders)} models")
+        print("\nFetching Off-Roaders data + images...")
+        all_items_or = process_deck(off_roaders, "off_roader", cache)
+        save_cache(cache)
 
-        for future in as_completed(futures_hh):
-            try:
-                item = future.result()
-                all_items_hh.append(item)
-            except Exception as e:
-                car = futures_hh[future]
-                print(f"  [!] Error processing {car['model']}: {e}")
-
-        for future in as_completed(futures_or):
-            try:
-                item = future.result()
-                all_items_or.append(item)
-            except Exception as e:
-                car = futures_or[future]
-                print(f"  [!] Error processing {car['model']}: {e}")
-
-    # Sort by name
-    all_items_hh.sort(key=lambda x: x["name"])
-    all_items_or.sort(key=lambda x: x["name"])
-
-    # Save cache
-    save_cache(cache)
+    if build_av:
+        all_vehicles = consolidate_cars(read_sheet(wb, "All Vehicles"))
+        print(f"All Vehicles: {len(all_vehicles)} models")
+        print("\nFetching All Vehicles data + images...")
+        all_items_av = process_deck(all_vehicles, "all", cache)
+        save_cache(cache)
 
     # Generate HTML
     print("\nGenerating HTML...")
+    decks = []
 
-    hh_path = str(OUTPUT_DIR / "hot_hatches.html")
-    swipestack(
-        items=all_items_hh,
-        output_path=hh_path,
-        title="Hot Hatches",
-        storage_key="swipestack_hh",
-        menu_url="index.html",
-    )
-    print(f"  -> {hh_path}")
+    if build_hh:
+        hh_path = str(OUTPUT_DIR / "hot_hatches.html")
+        swipestack(items=all_items_hh, output_path=hh_path, title="Hot Hatches",
+                   storage_key="swipestack_hh", menu_url="index.html")
+        print(f"  -> {hh_path}")
+        decks.append(("Hot Hatches", "hot_hatches.html", len(all_items_hh), ICON_BOLT))
 
-    or_path = str(OUTPUT_DIR / "off_roaders.html")
-    swipestack(
-        items=all_items_or,
-        output_path=or_path,
-        title="Off-Roaders",
-        storage_key="swipestack_or",
-        menu_url="index.html",
-    )
-    print(f"  -> {or_path}")
+    if build_or:
+        or_path = str(OUTPUT_DIR / "off_roaders.html")
+        swipestack(items=all_items_or, output_path=or_path, title="Off-Roaders",
+                   storage_key="swipestack_or", menu_url="index.html")
+        print(f"  -> {or_path}")
+        decks.append(("Off-Roaders", "off_roaders.html", len(all_items_or), ICON_COMPASS))
 
-    # Generate index.html (main menu)
-    generate_index(all_items_hh, all_items_or)
+    if build_av:
+        av_path = str(OUTPUT_DIR / "all_vehicles.html")
+        swipestack(items=all_items_av, output_path=av_path, title="All Comma Cars",
+                   storage_key="swipestack_av", menu_url="index.html")
+        print(f"  -> {av_path}")
+        decks.append(("All Comma Cars", "all_vehicles.html", len(all_items_av), ICON_CAR))
+
+    # If building a subset, load existing deck counts for index
+    if args.deck != "all":
+        if not build_hh and (OUTPUT_DIR / "hot_hatches.html").exists():
+            decks.insert(0, ("Hot Hatches", "hot_hatches.html", "?", ICON_BOLT))
+        if not build_or and (OUTPUT_DIR / "off_roaders.html").exists():
+            decks.insert(len(decks) - (1 if build_av else 0),
+                         ("Off-Roaders", "off_roaders.html", "?", ICON_COMPASS))
+        if not build_av and (OUTPUT_DIR / "all_vehicles.html").exists():
+            decks.append(("All Comma Cars", "all_vehicles.html", "?", ICON_CAR))
+
+    generate_index(decks)
 
     # Summary
-    us_hh = sum(1 for i in all_items_hh if i["region"] == "us")
-    eu_hh = sum(1 for i in all_items_hh if i["region"] == "eu")
-    us_or = sum(1 for i in all_items_or if i["region"] == "us")
-    eu_or = sum(1 for i in all_items_or if i["region"] == "eu")
-    total_images = sum(len(i["images"]) for i in all_items_hh + all_items_or)
-
+    all_items = all_items_hh + all_items_or + all_items_av
+    total_images = sum(len(i["images"]) for i in all_items)
     ip = get_local_ip()
     port = 8080
 
     print(f"\n{'=' * 40}")
-    print(f"Hot Hatches:  {len(all_items_hh)} cars ({us_hh} US, {eu_hh} EU)")
-    print(f"Off-Roaders:  {len(all_items_or)} cars ({us_or} US, {eu_or} EU)")
-    print(f"Images:       {total_images} downloaded")
+    if build_hh:
+        us = sum(1 for i in all_items_hh if i["region"] == "us")
+        eu = len(all_items_hh) - us
+        print(f"Hot Hatches:    {len(all_items_hh)} cars ({us} US, {eu} EU)")
+    if build_or:
+        us = sum(1 for i in all_items_or if i["region"] == "us")
+        eu = len(all_items_or) - us
+        print(f"Off-Roaders:    {len(all_items_or)} cars ({us} US, {eu} EU)")
+    if build_av:
+        us = sum(1 for i in all_items_av if i["region"] == "us")
+        eu = len(all_items_av) - us
+        print(f"All Vehicles:   {len(all_items_av)} cars ({us} US, {eu} EU)")
+    print(f"Images:         {total_images} downloaded")
     print(f"\nTo test:")
     print(f"  cd {OUTPUT_DIR} && python3 -m http.server {port}")
-    print(f"\nOn this Mac:")
-    print(f"  http://localhost:{port}/hot_hatches.html")
-    print(f"  http://localhost:{port}/off_roaders.html")
-    print(f"\nOn iPhone (same Wi-Fi):")
-    print(f"  http://{ip}:{port}/hot_hatches.html")
-    print(f"  http://{ip}:{port}/off_roaders.html")
+    print(f"\nOn this Mac:    http://localhost:{port}/index.html")
+    print(f"On iPhone:      http://{ip}:{port}/index.html")
 
 if __name__ == "__main__":
     main()
