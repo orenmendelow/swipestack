@@ -480,8 +480,6 @@ function onBudget(val) {
     updateBudgetLabel(val);
   }
   save();
-  // Reset seen to re-show cards within budget
-  seen=[];history=[];save();
   buildDeck();
 }
 function updateBudgetLabel(val) {
