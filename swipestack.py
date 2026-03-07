@@ -267,10 +267,11 @@ html,body{{
 }}
 .likes-grid-item{{
   border-radius:10px;overflow:hidden;cursor:pointer;
-  aspect-ratio:3/4;position:relative;background:var(--card-bg);
+  position:relative;background:var(--card-bg);
   box-shadow:0 1px 6px rgba(0,0,0,0.06);
 }}
-.likes-grid-item img{{width:100%;height:100%;object-fit:cover;}}
+.likes-grid-item::before{{content:'';display:block;padding-bottom:133.33%;}}
+.likes-grid-item img{{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;}}
 .likes-grid-item .likes-item-name{{
   position:absolute;bottom:0;left:0;right:0;
   padding:20px 6px 6px;
@@ -756,10 +757,16 @@ function showLikes() {{
 function hideLikes() {{document.getElementById('likesScreen').classList.remove('visible');}}
 function copyLikes() {{
   const names=likes.map(id=>{{const item=allItems.find(i=>i.id===id);return item?item.name:id;}});
-  navigator.clipboard.writeText(names.join('\\n')).then(()=>{{
-    const btn=document.querySelector('.btn-copy');
-    btn.textContent='Copied!';setTimeout(()=>{{btn.textContent='Copy List';}},1500);
-  }});
+  const text=names.join('\\n');
+  const onDone=()=>{{const btn=document.querySelector('.btn-copy');btn.textContent='Copied!';setTimeout(()=>{{btn.textContent='Copy List';}},1500);}};
+  if(navigator.clipboard&&window.isSecureContext){{navigator.clipboard.writeText(text).then(onDone).catch(()=>fallbackCopy(text,onDone));}}
+  else{{fallbackCopy(text,onDone);}}
+}}
+function fallbackCopy(text,cb){{
+  const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px';
+  document.body.appendChild(ta);ta.select();
+  try{{document.execCommand('copy');cb();}}catch(e){{}}
+  document.body.removeChild(ta);
 }}
 function startOver() {{likes=[];seen=[];history=[];save();hideLikes();buildDeck();}}
 

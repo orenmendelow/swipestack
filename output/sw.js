@@ -1,4 +1,4 @@
-const CACHE_NAME = 'swipestack-v1';
+const CACHE_NAME = 'swipestack-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
