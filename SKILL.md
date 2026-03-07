@@ -1,6 +1,6 @@
 # Swipestack
 
-Generate a Tinder-style swipe-to-decide PWA for any topic. When Oren says "I want a stack for X" or "make me a swipe deck of Y", use this.
+Generate a Tinder-style swipe-to-decide PWA for any topic. When the user says "I want a stack for X" or "make me a swipe deck of Y", use this.
 
 ## Trigger phrases
 - "I want a stack of..."
@@ -16,26 +16,98 @@ Generate a Tinder-style swipe-to-decide PWA for any topic. When Oren says "I wan
 
 A complete swipe deck: research items, fetch images, build stats, generate the PWA HTML. The output is always a self-contained HTML file in `~/Documents/ventures/swipestack/output/`.
 
+---
+
+## Notes for Claude (AI assistant building decks)
+
+If you're a Claude thread tasked with building a new swipestack deck, read this section carefully before writing any code.
+
+### Read the reference implementation first
+
+Before building anything, read these files to understand the patterns:
+- `swipestack.py` -- the generator module. You call `swipestack()` with a list of item dicts. Do NOT modify this file unless fixing a bug.
+- `main.py` -- the car deck orchestrator. This is your template for a new deck script. Study how it reads data, fetches from APIs, downloads images, builds item dicts, and calls `swipestack()`.
+- `car_data.py` -- hardcoded vehicle data. Your `{topic}_data.py` follows the same pattern: a big dict keyed by item name with real specs.
+
+### Critical rules
+
+1. **DO NOT fabricate data.** Every stat, price, spec, and rating must come from a real source -- web search, API, or user-provided data. If you can't find a real number, leave it out. Do not guess.
+
+2. **DO NOT modify `swipestack.py`** unless you're fixing a confirmed bug. The generator is stable and shared across all decks. Your job is to build the data layer and orchestrator script.
+
+3. **One search per image angle.** When fetching images via DuckDuckGo, run a separate search for each angle (front, rear, interior, detail, side). A single generic search returns 5 copies of the same angle.
+
+4. **DuckDuckGo image search is fragile.** It requires a vqd token flow and breaks periodically. If it fails, skip the image and move on -- the UI handles missing images with a placeholder. Do not spend time debugging DDG. See `main.py` `fetch_images_by_angle()` for the working implementation.
+
+5. **Cache everything.** Use a `cache.json` in the output dir. API responses and image download results go in cache. Re-runs should skip already-fetched data. See `main.py` for the caching pattern.
+
+6. **Parallelize with ThreadPoolExecutor.** Processing items (API calls + image downloads) should use 5 workers. See `main.py` `process_deck()` for the pattern.
+
+7. **Images go in `output/images/{slug}/`.** Filenames: `front.jpg`, `rear.jpg`, `interior.jpg`, `detail.jpg`, `side.jpg`. Max 800px wide, JPEG quality 82, minimum 10KB (skip thumbnails). Convert RGBA to RGB.
+
+8. **Budget slider uses `min_price` (int).** Parse the low end of a price range string like "$10k-$16k" into an integer like 10000. Set to 0 if no price data.
+
+9. **The `region` field** is used for the US/All toggle. Set `"us"` for items available in the US, `"eu"` for items only available in Europe/Asia/elsewhere. If region doesn't apply to your domain, set everything to `"us"`.
+
+10. **Zero emojis.** The entire output must contain zero emoji characters. All icons are inline SVGs defined in `swipestack.py`. Use the icon names: `fuel` `gauge` `bolt` `wrench` `engine` `dollar` `drive` `car` `clearance` `tow` `power` `check` `x` `heart` `undo` `info` `compass`.
+
+11. **Update `output/index.html`** to include the new deck. Read the existing file and add a new `deck-card` link following the existing pattern.
+
+12. **Service worker cache versioning.** After generating new HTML, bump the version string in `output/sw.js` (e.g., `swipestack-v3` to `swipestack-v4`) so phones pick up the new files.
+
+### Architecture of a new deck
+
+```
+{topic}_data.py      # Hardcoded item data dict + any API name mappings
+{topic}_main.py      # Orchestrator: read source data, fetch APIs, download images, call swipestack()
+output/{topic}.html  # Generated deck (do not hand-edit)
+output/images/{slug}/ # Downloaded images per item
+```
+
+Your orchestrator script should:
+1. Read source data (spreadsheet, CSV, API, or hardcoded list)
+2. Load/create cache
+3. For each item in parallel (ThreadPoolExecutor, 5 workers):
+   a. Fetch real specs from APIs or web
+   b. Merge with hardcoded data from `{topic}_data.py`
+   c. Download images by angle
+4. Build the list of item dicts (see schema below)
+5. Call `swipestack()` to generate HTML
+6. Update `output/index.html`
+7. Print summary + serve instructions
+
+### Verify before declaring done
+
+- Run the orchestrator script end-to-end
+- Start `python3 -m http.server 8080` in the output dir
+- Confirm the HTML loads (curl or browser)
+- Confirm images display on cards
+- Confirm budget slider range makes sense
+- Confirm zero emojis in the output HTML (grep for common emoji codepoints)
+- Confirm likes screen works (grid layout, copy list, modal)
+
+---
+
 ## Step-by-step workflow
 
 ### 1. Understand the domain
 
-From Oren's request, determine:
+From the user's request, determine:
 - **What items** are being compared (cars, apartments, laptops, sneakers, furniture, etc.)
 - **What matters** for this category (price, specs, ratings, location, etc.)
 - **What filters** make sense (budget is standard; add domain-specific ones)
-- **How many items** — aim for 10-60 for a good swipe session
+- **How many items** -- aim for 10-60 for a good swipe session
 
 ### 2. Research items
 
 DO NOT fabricate data. For each item, go get real information:
 - **Web search** for current specs, prices, reviews
 - **APIs** if available (fueleconomy.gov for cars, etc.)
-- **Source data** if Oren provides a spreadsheet or list
+- **Source data** if the user provides a spreadsheet or list
 
 Build a `{topic}_data.py` file with hardcoded item data, similar to `car_data.py`. Every stat must be real and sourced.
 
-### 3. Fetch images — 5 per item, distinct angles
+### 3. Fetch images -- 5 per item, distinct angles
 
 This is the hardest part and the most important to get right.
 
@@ -65,15 +137,15 @@ Adapt angles per domain:
 - Use `output/images/{slug}/` directory per item
 
 **Image sourcing (in order of preference):**
-1. Check if images already exist on disk — skip fetch if so
+1. Check if images already exist on disk -- skip fetch if so
 2. DuckDuckGo image search with `x-vqd-4` header (free, no key)
    - POST to `https://duckduckgo.com` with `data={"q": query}` to get vqd token
    - Set `x-vqd-4` header with the token
    - GET `https://duckduckgo.com/i.js` with params
-   - This is FRAGILE — DDG changes their API regularly
+   - This is FRAGILE -- DDG changes their API regularly
 3. If DDG fails, note it and move on. The UI handles missing images gracefully.
 
-**One search per angle.** Do NOT use a single generic search for all images — you'll get 5 photos from the same angle.
+**One search per angle.** Do NOT use a single generic search for all images -- you'll get 5 photos from the same angle.
 
 ### 4. Build item dicts
 
@@ -150,7 +222,7 @@ Add the new deck to `output/index.html` so it appears in the main menu. Read the
 
 ## UI spec (already built into swipestack.py)
 
-- Monochrome design — no color accents, all black/white/gray
+- Monochrome design -- no color accents, all black/white/gray
 - Card stack: 52% photo area, 48% scrollable profile panel
 - Photo carousel: tap left/right edges, dot indicators, instant switch (no fade)
 - Bottom bar: 44px pass/like buttons, 36px undo, compact 52px bar
@@ -159,7 +231,7 @@ Add the new deck to `output/index.html` so it appears in the main menu. Read the
 - Likes screen with grid + copy list + start over
 - Dark mode via `prefers-color-scheme`
 - PWA with offline support via `sw.js`
-- All icons are inline SVG — zero emojis anywhere
+- All icons are inline SVG -- zero emojis anywhere
 
 ## File structure for a new deck
 
